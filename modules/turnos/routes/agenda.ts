@@ -55,7 +55,7 @@ router.get('/agenda/candidatas', function (req, res, next) {
             'horaInicio': { '$gte': horaAgendaOrig },
             'nominalizada': true,
             '$or': [{ estado: 'disponible' }, { estado: 'publicada' }],
-            'tipoPrestaciones._id': turno.tipoPrestacion ? mongoose.Types.ObjectId(turno.tipoPrestacion.id) : '', // Que tengan incluída la prestación del turno
+            'tipoPrestaciones.conceptId': turno.tipoPrestacion ? mongoose.Types.ObjectId(turno.tipoPrestacion.id) : '', // Que tengan incluída la prestación del turno
             '_id': { '$ne': mongoose.Types.ObjectId(req.query.idAgenda) }, // Que no sea la agenda original
         };
 
@@ -138,7 +138,8 @@ router.get('/agenda/:id?', function (req, res, next) {
         }
 
         if (req.query.idTipoPrestacion) {
-            query.where('tipoPrestaciones._id').equals(req.query.idTipoPrestacion);
+            console.log('req.query.idTipoPrestacion ',req.query.idTipoPrestacion);
+            query.where('tipoPrestaciones.conceptId').equals(req.query.idTipoPrestacion);
         }
 
         if (req.query.espacioFisico) {
@@ -164,11 +165,12 @@ router.get('/agenda/:id?', function (req, res, next) {
 
         // Filtra por el array de tipoPrestacion enviado como parametro
         if (req.query.tipoPrestaciones) {
-            query.where('tipoPrestaciones._id').in(req.query.tipoPrestaciones);
+            query.where('tipoPrestaciones.conceptId').in(req.query.tipoPrestaciones);
         }
 
         // Dada una lista de prestaciones, filtra las agendas que tengan al menos una de ellas como prestación
         if (req.query.prestaciones) {
+            console.log('aaa');
             let arr_prestaciones: any[] = JSON.parse(req.query.prestaciones);
             let variable: any[] = [];
             arr_prestaciones.forEach((prestacion, index) => {
