@@ -138,7 +138,6 @@ router.get('/agenda/:id?', function (req, res, next) {
         }
 
         if (req.query.idTipoPrestacion) {
-            console.log('req.query.idTipoPrestacion ',req.query.idTipoPrestacion);
             query.where('tipoPrestaciones.conceptId').equals(req.query.idTipoPrestacion);
         }
 
@@ -170,7 +169,6 @@ router.get('/agenda/:id?', function (req, res, next) {
 
         // Dada una lista de prestaciones, filtra las agendas que tengan al menos una de ellas como prestación
         if (req.query.prestaciones) {
-            console.log('aaa');
             let arr_prestaciones: any[] = JSON.parse(req.query.prestaciones);
             let variable: any[] = [];
             arr_prestaciones.forEach((prestacion, index) => {
