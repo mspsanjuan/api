@@ -57,6 +57,9 @@ router.get('/prestaciones/:id*?', function (req, res, next) {
         if (req.query.conceptsIdEjecucion) {
             query.where('ejecucion.registros.concepto.conceptId').in(req.query.conceptsIdEjecucion);
         }
+        if (req.query.tipoPrestaciones) {
+            query.where('solicitud.tipoPrestacion.conceptId').in(req.query.tipoPrestaciones);
+        }
 
         // Solicitudes generadas desde puntoInicio Ventanilla
         // Solicitudes que no tienen prestacionOrigen ni turno
