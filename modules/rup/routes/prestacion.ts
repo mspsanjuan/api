@@ -71,6 +71,9 @@ router.get('/prestaciones/:id*?', function (req, res, next) {
         if (req.query.tieneTurno === 'no') {
             query.where('solicitud.turno').equals(null);
         }
+        if (req.query.tieneTurno === 'si') {
+            query.where('solicitud.turno').ne(null);
+        }
 
         if (req.query.organizacion) {
             query.where('solicitud.organizacion.id').equals(req.query.organizacion);
@@ -128,9 +131,15 @@ router.patch('/prestaciones/:id', function (req, res, next) {
                     }
                     data['estados'].push(req.body.estado);
                 }
+
+                if (req.body.ejecucion) {
+                    data.ejecucion = req.body.ejecucion;
+                }
+
                 if (req.body.registros) {
                     data.ejecucion.registros = req.body.registros;
                 }
+
                 break;
             case 'romperValidacion':
                 if (data.estados[data.estados.length - 1].tipo !== 'validada') {
