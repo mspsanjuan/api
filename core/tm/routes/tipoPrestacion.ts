@@ -64,7 +64,11 @@ router.get('/v2/tipoPrestaciones/:id?', async function (req, res, next) {
         }
 
         if (req.query.conceptsIds) {
-            pipeline = [ { $match: { conceptId: { $in: req.query.conceptsIds } } }, ...pipeline];
+            if (typeof req.query.conceptsIds === 'string') {
+                pipeline = [ { $match: { conceptId: { $in: [req.query.conceptsIds] } } }, ...pipeline];
+            } else {
+                pipeline = [ { $match: { conceptId: { $in: req.query.conceptsIds } } }, ...pipeline];
+            }
         }
 
     }
