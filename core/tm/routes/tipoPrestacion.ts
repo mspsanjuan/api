@@ -1,6 +1,8 @@
 import * as utils from '../../../utils/utils';
 import * as express from 'express';
 import { tipoPrestacion } from '../schemas/tipoPrestacion';
+import { snomedModel } from '../../term/schemas/snomed';
+import { toArray } from '../../../utils/utils';
 
 let router = express.Router();
 
@@ -31,6 +33,50 @@ router.get('/tiposPrestaciones/:id*?', function (req, res, next) {
         }
         res.json(data);
     });
+});
+
+router.get('/v2/tipoPrestaciones/:id?', async function (req, res, next) {
+    let pipeline: any[] = [
+        { $match: { 'memberships.refset.conceptId': '1661000013109' } },
+        { $unwind: '$descriptions' },
+        { $match: { 'descriptions.active': true, 'descriptions.languageCode': 'es', 'descriptions.type.conceptId': '900000000000013009' } },
+
+        // { $match: { words: /cardio/ } },
+        // { $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 }}
+    ];
+
+    if (req.params.id) {
+        pipeline = [ {$match: { conceptId: req.params.id }}, ...pipeline];
+    } else {
+        if (req.query.term) {
+            let conditions = {'$and': []};
+            let words = req.query.term.split(' ');
+            words.forEach(function (word) {
+                word = word.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1').replace(/\x08/g, '\\x08');
+                let expWord = '^' + utils.removeDiacritics(word) + '.*';
+                conditions['$and'].push({ '$descriptions.words': { '$regex': expWord } });
+            });
+            pipeline.push({ $match: conditions  });
+        } else {
+
+        }
+
+        if (req.query.id) {
+            pipeline = [ { $match: { conceptId: { $in: req.query.id } } }, ...pipeline];
+        }
+
+    }
+
+    pipeline.push({ $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 }});
+    pipeline.push({ $project: {
+        fsn: '$fullySpecifiedName', conceptId: 1, 'semanticTag': '$semtag',
+        term: '$descriptions.term',
+        'acceptability': {  '$let': { 'vars': {  'field': { $arrayElemAt: [ '$descriptions.acceptability', 0 ] } }, 'in': '$$field.acceptability' } }
+      }
+    });
+
+    let data = await toArray(snomedModel.aggregate(pipeline).cursor({}).exec());
+    res.json(data);
 });
 
 // router.post('/tiposPrestaciones', function (req, res, next) {

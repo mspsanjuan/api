@@ -35,7 +35,7 @@ export let snomedSchema = new mongoose.Schema({
         refset: {
             conceptId: String,
             preferredTerm: String
-        }    
+        }
     }],
     relationships: [{
         _id: false,
