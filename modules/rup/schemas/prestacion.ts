@@ -24,7 +24,7 @@ export let schema = new mongoose.Schema({
     solicitud: {
         // Tipo de prestación de ejecutarse
         tipoPrestacion: {
-            id: mongoose.Schema.Types.ObjectId,
+            id: String,
             conceptId: String,
             term: String,
             fsn: String,

@@ -3,6 +3,7 @@ import * as express from 'express';
 import { tipoPrestacion } from '../schemas/tipoPrestacion';
 import { snomedModel } from '../../term/schemas/snomed';
 import { toArray } from '../../../utils/utils';
+import { Auth } from '../../../auth/auth.class';
 
 let router = express.Router();
 
@@ -36,6 +37,7 @@ router.get('/tiposPrestaciones/:id*?', function (req, res, next) {
 });
 
 router.get('/v2/tipoPrestaciones/:id?', async function (req, res, next) {
+
     let pipeline: any[] = [
         { $match: { 'memberships.refset.conceptId': '1661000013109' } },
         { $unwind: '$descriptions' },
@@ -54,15 +56,15 @@ router.get('/v2/tipoPrestaciones/:id?', async function (req, res, next) {
             words.forEach(function (word) {
                 word = word.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1').replace(/\x08/g, '\\x08');
                 let expWord = '^' + utils.removeDiacritics(word) + '.*';
-                conditions['$and'].push({ '$descriptions.words': { '$regex': expWord } });
+                conditions['$and'].push({ 'descriptions.words': { '$regex': expWord } });
             });
             pipeline.push({ $match: conditions  });
         } else {
 
         }
 
-        if (req.query.id) {
-            pipeline = [ { $match: { conceptId: { $in: req.query.id } } }, ...pipeline];
+        if (req.query.conceptsIds) {
+            pipeline = [ { $match: { conceptId: { $in: req.query.conceptsIds } } }, ...pipeline];
         }
 
     }

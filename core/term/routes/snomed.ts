@@ -53,7 +53,9 @@ router.get('/snomed', function (req, res, next) {
         conceptActive: true,
         active: true
     };
-    req.query.search = req.query.search.toLowerCase();
+    if (req.query.search) {
+        req.query.search = req.query.search.toLowerCase();
+    }
     // Filtramos por semanticTag
     if (req.query.semanticTag) {
         conditions['$or'] = [...[], req.query.semanticTag].map((i) => { return { semanticTag: i }; });
@@ -80,6 +82,11 @@ router.get('/snomed', function (req, res, next) {
     } else {
         if (req.query.refsetId) {
             conditions['refsetIds'] = req.query.refsetId;
+        }
+
+        if (req.query.conceptsIds) {
+            conditions['$and'] = [];
+            conditions['$and'].push({ 'conceptId': { '$in': req.query.conceptsIds } });
         }
     }
     // preparamos query

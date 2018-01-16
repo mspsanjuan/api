@@ -50,13 +50,12 @@ router.get('/agenda/candidatas', async function (req, res, next) {
 
         // turno a reasignar
         let turno = resultado.bloques[indiceBloque].turnos[indiceTurno];
-
         let match = {
             'organizacion._id': { '$eq': mongoose.Types.ObjectId(Auth.getOrganization(req)) }, // Que sean agendas de la misma organizacion
             'horaInicio': { '$gte': horaAgendaOrig },
             'nominalizada': true,
             '$or': [{ estado: 'disponible' }, { estado: 'publicada' }],
-            'tipoPrestaciones._id': turno.tipoPrestacion ? mongoose.Types.ObjectId(turno.tipoPrestacion.id) : '', // Que tengan incluída la prestación del turno
+            'tipoPrestaciones.conceptId': turno.tipoPrestacion ? turno.tipoPrestacion.conceptId : '', // Que tengan incluída la prestación del turno
             '_id': { '$ne': mongoose.Types.ObjectId(req.query.idAgenda) }, // Que no sea la agenda original
         };
 
@@ -130,7 +129,7 @@ router.get('/agenda/:id?', function (req, res, next) {
         }
 
         if (req.query.idTipoPrestacion) {
-            query.where('tipoPrestaciones._id').equals(req.query.idTipoPrestacion);
+            query.where('tipoPrestaciones.conceptId').equals(req.query.idTipoPrestacion);
         }
 
         if (req.query.espacioFisico) {
@@ -156,7 +155,7 @@ router.get('/agenda/:id?', function (req, res, next) {
 
         // Filtra por el array de tipoPrestacion enviado como parametro
         if (req.query.tipoPrestaciones) {
-            query.where('tipoPrestaciones._id').in(req.query.tipoPrestaciones);
+            query.where('tipoPrestaciones.conceptId').in(req.query.tipoPrestaciones);
         }
 
         // Dada una lista de prestaciones, filtra las agendas que tengan al menos una de ellas como prestación
