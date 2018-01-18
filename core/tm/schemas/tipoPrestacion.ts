@@ -7,7 +7,8 @@ export let tipoPrestacionSchema = new mongoose.Schema({
     semanticTag: {
         type: String,
         enum: ['procedimiento', 'solicitud', 'hallazgo', 'trastorno', 'antecedenteFamiliar', 'régimen/tratamiento']
-    }
+    },
+    preferido: String // Termino preferido de SNOMED
 });
 
 /* Se definen los campos virtuals */

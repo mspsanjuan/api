@@ -29,7 +29,8 @@ export let schema = new mongoose.Schema({
             term: String,
             fsn: String,
             semanticTag: SemanticTag,
-            refsetIds: [String]
+            refsetIds: [String],
+            preferido: String // Termino preferido en SNOMED
         },
         // Fecha de solicitud
         // Nota: Este dato podría obtener del array de estados, pero está aquí para facilidar de consulta
