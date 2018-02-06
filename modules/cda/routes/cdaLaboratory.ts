@@ -41,7 +41,7 @@ hacemos esto para luego llamarlo con algún robot en lugar de modificar el softw
 
 router.post('/laboratorios', async(req: any, res, next) => {
     if (!Auth.check(req, 'cdaLaboratorio:post')) {
-        return next(403);
+       return next(403);
     }
     try {
         let unPaciente = req.body.paciente;
@@ -68,7 +68,7 @@ router.post('/laboratorios', async(req: any, res, next) => {
                 };
                 let texto = 'Exámen de Laboratorio';
                 let uniqueId = String(new mongoose.Types.ObjectId());
-                let informePDF = await pdfGenerator.informeLaboratorio(paciente, organizacion, reg.idProtocolo, details);
+                let informePDF = await pdfGenerator.informeLaboratorio(paciente, organizacion, reg, details);
                 let fileData;
                 if (informePDF) {
                     fileData = await cdaCtr.storePdfFile(informePDF);
@@ -78,7 +78,7 @@ router.post('/laboratorios', async(req: any, res, next) => {
                     paciente: paciente.id,
                     prestacion: snomed,
                     fecha: fecha,
-                    adjuntos: [fileData.filename]
+                    adjuntos: [ fileData.data ]
                 };
                 let obj = await cdaCtr.storeCDA(uniqueId, cda, metadata);
                 // Marcamos el protocolo (encabezado) como generado, asignando el uniqueId
