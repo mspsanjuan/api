@@ -5,6 +5,7 @@ import { Swagger } from './swagger/swagger.class';
 import { Connections } from './connections';
 import * as HttpStatus from 'http-status-codes';
 import { Express } from 'express';
+import * as helmet from 'helmet';
 
 let requireDir = require('require-dir');
 
@@ -16,10 +17,12 @@ export function initAPI(app: Express) {
     Connections.initialize();
 
     // Configura Express
+    app.use(helmet());
     app.use(bodyParser.json({ limit: '150mb' }));
     app.use(bodyParser.urlencoded({
         extended: true
     }));
+
     app.all('*', function (req, res, next) {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
