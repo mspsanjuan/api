@@ -5,11 +5,11 @@ import * as https from 'https';
 import * as organizacion from '../schemas/organizacion';
 
 import * as utils from '../../../utils/utils';
-import {toArray} from '../../../utils/utils';
-import {defaultLimit, maxLimit} from './../../../config';
+import { toArray } from '../../../utils/utils';
+import { defaultLimit, maxLimit } from './../../../config';
 
 import * as configPrivate from '../../../config.private';
-import {Auth} from '../../../auth/auth.class';
+import { Auth } from '../../../auth/auth.class';
 // import * as estadoCama from '../routes/camaEstado';
 // import {camaEstado} from './../schemas/camaEstado';
 import * as CamaEstadoModel from '../models/camaEstado';
@@ -51,7 +51,7 @@ router.get('/organizaciones/:id/camas', function (req, res, next) {
     let query;
     query = organizacion
         .model
-        .findOne({_id: req.params.id});
+        .findOne({ _id: req.params.id });
     if (req.query.estado) {
         query
             .where('camas.estado')
@@ -62,7 +62,7 @@ router.get('/organizaciones/:id/camas', function (req, res, next) {
             .where('camas.habitacion')
             .equals(req.query.habitacion);
     }
-    query.sort({'camas.numero': 1, 'camas.habitacion': 1});
+    query.sort({ 'camas.numero': 1, 'camas.habitacion': 1 });
     query.exec({}, (err, data) => {
         if (err) {
             return next(err);
@@ -142,12 +142,12 @@ router.get('/organizaciones/georef/:id?', async function (req, res, next) {
                 }, {
                     '$project': {
                         '_id': 0,
-                        'nombre': '$nombre',
+                        'nombre': 'nombre',
                         'lat': {
-                            $arrayElemAt: ['$direccion.geoReferencia', 0]
+                            $arrayElemAt: ['direccion.geoReferencia', 0]
                         },
                         'lng': {
-                            $arrayElemAt: ['$direccion.geoReferencia', 1]
+                            $arrayElemAt: ['direccion.geoReferencia', 1]
                         }
                     }
                 }
@@ -565,10 +565,10 @@ router.patch('/organizaciones/:id/camas', (req, res, next) => {
                 data.camas.push(req.body.newCama);
                 Auth.audit(data.camas[data.camas.length - 1], req);
 
-            break;
+                break;
 
             default:
-            return next(500);
+                return next(500);
         }
 
         // console.log(data.camas[data.camas.length - 1], 'asdasd');
