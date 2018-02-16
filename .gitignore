@@ -18,3 +18,4 @@ typings
 typings/*
 .vscode
 .snyk
+nspcheck.txt
