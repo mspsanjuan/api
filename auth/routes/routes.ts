@@ -252,7 +252,7 @@ router.post('/login', function (req, res, next) {
  */
 
 router.post('/file-token', Auth.authenticate(), (req, res, next) => {
-    return res.json({token: Auth.generateFileToken()});
+    return res.json({ token: Auth.generateFileToken() });
 });
 
 export = router;
