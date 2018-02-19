@@ -48,21 +48,31 @@ export class Documento {
             let logotipoAndes: Buffer = fs.readFileSync('./templates/andes/logotipo-andes-blue.png');
             let logoPDP: Buffer = fs.readFileSync('./templates/andes/logo-pdp.png');
 
+            // Se cargan HTMLs de <header> y <footer>
             let header = fs.readFileSync(`./templates/${modulo}/header.html`).toString();
             let footer = fs.readFileSync(`./templates/${modulo}/footer.html`).toString();
 
+            // Nos aseguramos que todos los assets están presentes y se cargaron correctamente
             if (!logoAndes || !logotipoAndes || !logoPDP || !header || !footer) {
                 reject('Error al cargar archivo.');
             }
 
-            resolve({ header: header, footer: footer, logos: { logoAndes: logoAndes, logotipoAndes: logotipoAndes, logoPDP: logoPDP } });
+            resolve({
+                header: header,
+                footer: footer,
+                logos: {
+                    logoAndes: logoAndes,
+                    logotipoAndes: logotipoAndes,
+                    logoPDP: logoPDP
+                }
+            });
         });
     }
 
     /**
      *
      * @param req ExpressJS request
-     * TODO: Extender
+     * TODO: Extender?
      */
     private async generarHTML(req) {
         return new Promise(async (resolve, reject) => {
@@ -73,6 +83,7 @@ export class Documento {
             // Se agregan los estilos CSS
             html += await this.generarCSS(req.body.modulo);
 
+            // Se cargan logos y HTMLs de <header> y <footer>
             let assets: any = await this.cargarAssets(req.body.modulo);
 
             // Se reemplazan ciertos <!--placeholders--> por diferentes assets y datos
@@ -95,7 +106,7 @@ export class Documento {
 
     /**
      * Genera CSS de RUP
-     * TODO: Extender
+     * TODO: Extender?
      */
     private async generarCSS(modulo) {
         return new Promise((resolve, reject) => {
@@ -123,15 +134,26 @@ export class Documento {
         });
     }
 
+    private async generarPDF(html: string, options = {}) {
+        return new Promise((resolve, reject) => {
+            pdf.create(html.toString(), options).toFile((err2, file) => {
+                if (err2) {
+                    reject(err2);
+                }
+                resolve(file.filename);
+            });
+        });
+    }
+
     /**
      *
      * @param req ExpressJS request
      * @param res ExpressJS response
      * @param next ExpressJS next
      * @param options html-pdf/PhantonJS rendering options
-     * TODO: extender
+     * TODO: extender?
      */
-    private async generar(req, next, options = null) {
+    private async generarDoc(req, next, options = null) {
         return new Promise(async (resolve, reject) => {
 
             // PhantomJS PDF rendering options
@@ -141,6 +163,7 @@ export class Documento {
                 this.options = options;
             }
 
+            // Se genera el HTML completo, desde el que se va a generar el PDF
             let html = await this.generarHTML(req);
 
             // Tipo de archivo a descargar (html|pdf)
@@ -150,12 +173,7 @@ export class Documento {
                     break;
                 case 'pdf':
                 default:
-                    pdf.create(html.toString(), this.options).toFile((err2, file) => {
-                        if (err2) {
-                            reject(err2);
-                        }
-                        resolve(file.filename);
-                    });
+                    resolve(await this.generarPDF(html.toString(), this.options));
                     break;
             }
         });
@@ -163,7 +181,7 @@ export class Documento {
 
     public async descargar(req, res, next) {
         return new Promise(async (resolve, reject) => {
-            let file = await this.generar(req, next);
+            let file = await this.generarDoc(req, next);
             res.download(file, (err) => {
                 if (err) {
                     reject(err);
