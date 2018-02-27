@@ -38,54 +38,84 @@ router.get('/tiposPrestaciones/:id*?', function (req, res, next) {
 
 router.get('/v2/tipoPrestaciones/:id?', async function (req, res, next) {
 
-    // Trae sinónimos
-    let pipeline: any[] = [
-        { $match: { 'memberships.refset.conceptId': '1661000013109' } },
-        { $unwind: '$descriptions' },
-        { $match: { 'descriptions.active': true, 'descriptions.languageCode': 'es', 'descriptions.type.conceptId': '900000000000013009' } },
+    if (req.query.conSinonimia === 'si') {
 
-        // { $match: { words: /cardio/ } },
-        // { $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 }}
-    ];
+        // Trae sinónimos
+        let pipeline: any[] = [
+            { $match: { 'memberships.refset.conceptId': '1661000013109' } },
+            { $unwind: '$descriptions' },
+            { $match: { 'descriptions.active': true, 'descriptions.languageCode': 'es', 'descriptions.type.conceptId': '900000000000013009' } },
+
+            // { $match: { words: /cardio/ } },
+            // { $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 }}
+        ];
 
 
-    if (req.params.id) {
-        pipeline = [{ $match: { conceptId: req.params.id } }, ...pipeline];
+        if (req.params.id) {
+            pipeline = [{ $match: { conceptId: req.params.id } }, ...pipeline];
+        } else {
+            if (req.query.term) {
+                let conditions = { '$and': [] };
+                let words = req.query.term.split(' ');
+                words.forEach(function (word) {
+                    word = word.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1').replace(/\x08/g, '\\x08');
+                    let expWord = '^' + utils.removeDiacritics(word) + '.*';
+                    conditions['$and'].push({ 'descriptions.words': { '$regex': expWord } });
+                });
+                pipeline.push({ $match: conditions });
+            } else {
+
+            }
+
+            if (req.query.conceptIds) {
+                if (typeof req.query.conceptIds === 'string') {
+                    pipeline = [{ $match: { conceptId: { $in: [req.query.conceptIds] } } }, ...pipeline];
+                } else {
+                    pipeline = [{ $match: { conceptId: { $in: req.query.conceptIds } } }, ...pipeline];
+                }
+            }
+
+        }
+
+        pipeline.push({ $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 } });
+        pipeline.push({
+            $project: {
+                fsn: '$fullySpecifiedName', conceptId: 1, 'semanticTag': '$semtag',
+                term: '$descriptions.term',
+                'acceptability': { '$let': { 'vars': { 'field': { $arrayElemAt: ['$descriptions.acceptability', 0] } }, 'in': '$$field.acceptability' } }
+            }
+        });
+
+        let data = await toArray(snomedModel.aggregate(pipeline).cursor({}).exec());
+        res.json(data);
     } else {
-        if (req.query.term) {
-            let conditions = { '$and': [] };
-            let words = req.query.term.split(' ');
-            words.forEach(function (word) {
-                word = word.replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, '\\$1').replace(/\x08/g, '\\x08');
-                let expWord = '^' + utils.removeDiacritics(word) + '.*';
-                conditions['$and'].push({ 'descriptions.words': { '$regex': expWord } });
-            });
-            pipeline.push({ $match: conditions });
+
+        let query;
+        // Búsqueda por un sólo ID
+        if (req.params.id) {
+            query = tipoPrestacion.findById(req.params.id);
         } else {
 
-        }
+            query = snomedModel.find({ 'memberships.refset.conceptId': '1661000013109' });
 
-        if (req.query.conceptsIds) {
-            if (typeof req.query.conceptsIds === 'string') {
-                pipeline = [{ $match: { conceptId: { $in: [req.query.conceptsIds] } } }, ...pipeline];
-            } else {
-                pipeline = [{ $match: { conceptId: { $in: req.query.conceptsIds } } }, ...pipeline];
+            // Búsqueda por uno o múltiples IDs
+            if (req.query.conceptIds) {
+                if (typeof req.query.conceptIds === 'string') {
+                    query.where('conceptId').in([req.query.conceptIds]);
+                } else {
+                    query.where('conceptId').in(req.query.conceptIds);
+                }
             }
-        }
 
+            // Consultar
+            query.exec(function (err, data) {
+                if (err) {
+                    return next(err);
+                }
+                res.json(data);
+            });
+        }
     }
-
-    pipeline.push({ $sort: { 'conceptId': 1, 'acceptability.conceptId': 1 } });
-    pipeline.push({
-        $project: {
-            fsn: '$fullySpecifiedName', conceptId: 1, 'semanticTag': '$semtag',
-            term: '$descriptions.term',
-            'acceptability': { '$let': { 'vars': { 'field': { $arrayElemAt: ['$descriptions.acceptability', 0] } }, 'in': '$$field.acceptability' } }
-        }
-    });
-
-    let data = await toArray(snomedModel.aggregate(pipeline).cursor({}).exec());
-    res.json(data);
 });
 
 // router.post('/tiposPrestaciones', function (req, res, next) {
