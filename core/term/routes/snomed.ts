@@ -84,9 +84,9 @@ router.get('/snomed', function (req, res, next) {
             conditions['refsetIds'] = req.query.refsetId;
         }
 
-        if (req.query.conceptsIds) {
+        if (req.query.conceptIds) {
             conditions['$and'] = [];
-            conditions['$and'].push({ 'conceptId': { '$in': req.query.conceptsIds } });
+            conditions['$and'].push({ 'conceptId': { '$in': req.query.conceptIds } });
         }
     }
     // preparamos query
