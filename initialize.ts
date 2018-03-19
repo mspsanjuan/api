@@ -73,7 +73,7 @@ export function initAPI(app: Express) {
             }
 
             // IMPORTANTE: Express app.get('env') returns 'development' if NODE_ENV is not defined.
-            // O sea, la API está corriendo siempre en modo development
+            // O sea, la API está corriendo en Producción en modo development
 
             // Send response
             res.status(err.status);
