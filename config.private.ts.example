@@ -52,7 +52,7 @@ export const sisa = {
 };
 // Configuración servicio ANSES
 export const anses = {
-    username: '',
+    Usuario: '',
     password: '',
     url: '',
     serv: '',
@@ -152,7 +152,29 @@ export const conSql = {
     }
 };
 
+export const conSqlHPN = {
+    auth : {
+        user: '',
+        password: ''
+    },
+    serverSql: {
+        server: '',
+        database: ''
+    },
+    pool: {
+        acquireTimeoutMillis: 15000
+    }
+
+}
+
 export const CDA = {
     rootOID: ''
 };
 
+export const wsSalud = {
+   host: '',
+   getPaciente: '',
+   getResultado: '',
+   hellerWS: '',
+   hellerFS: ''
+};

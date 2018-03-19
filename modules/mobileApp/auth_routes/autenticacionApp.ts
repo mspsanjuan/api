@@ -1,11 +1,14 @@
 import * as jwt from 'jsonwebtoken';
 import { pacienteApp } from '../schemas/pacienteApp';
 import { paciente, pacienteMpi } from '../../../core/mpi/schemas/paciente';
+import { buscarPaciente } from '../../../core/mpi/controller/paciente';
+
 import * as express from 'express';
 import * as authController from '../controller/AuthController';
 import * as mongoose from 'mongoose';
 import { Auth } from '../../../auth/auth.class';
 import * as agenda from '../../turnos/schemas/agenda';
+import * as labsImport from '../../cda/controller/import-labs';
 
 let router = express.Router();
 
@@ -50,6 +53,14 @@ router.post('/login', function (req, res, next) {
                     token: token,
                     user: user
                 });
+
+                // Hack momentaneo. Descargamos los laboratorios a demanda.
+                buscarPaciente(user.pacientes[0].id).then((resultado) => {
+                    if (resultado.paciente) {
+                        labsImport.importarDatos(resultado.paciente);
+                    }
+                });
+
                 return;
             } else {
                 return res.status(422).send({ error: 'e-mail o password incorrecto' });
