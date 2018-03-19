@@ -73,9 +73,11 @@
   "scripts": {
     "startNode": "tsc && gulp && concurrently \"npm run node\" ",
     "start": "npm run parse && concurrently -r \"npm run tsc:w\" \"npm run node\" ",
-    "prod": "npm run parse && concurrently -r \"npm run tsc:w\" \"npm run node_prod\" ",
     "node": "nodemon -q ./index.js",
+    "prod": "npm run parse && concurrently -r \"npm run tsc:w\" \"npm run node_prod\" ",
+    "dev": "npm run parse && concurrently -r \"npm run tsc:w\" \"npm run node_dev\" ",
     "node_prod": "export NODE_ENV=production && nodemon -q ./start.js",
+    "node_dev": "nodemon -q ./start.js",
     "tsc": "tsc",
     "tsc:w": "tsc -w",
     "jobs": "tsc && node jobs/scheduler.js",
