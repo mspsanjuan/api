@@ -41,7 +41,7 @@ export class Documento {
         };
     }
 
-    private async cargarAssets(modulo) {
+    private async cargarAssets(modulo = 'rup') {
         return new Promise((resolve, reject) => {
             // Se cargan logos
             let logoAndes: Buffer = fs.readFileSync('./templates/andes/logo-andes.png');
@@ -108,7 +108,7 @@ export class Documento {
      * Genera CSS de RUP
      * TODO: Extender?
      */
-    private async generarCSS(modulo) {
+    private async generarCSS(modulo = 'rup') {
         return new Promise((resolve, reject) => {
             fs.stat(`./templates/${modulo}/styles.scss`, (err, stats) => {
 
