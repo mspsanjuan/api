@@ -61,7 +61,15 @@ function organizacionCompleto(idOrganizacion): any {
 export function noExistCDA(protocol, dniPaciente) {
     return new Promise(async function (resolve, reject) {
         try {
-            let query = 'select * from LAB_ResultadoEncabezado where idProtocolo = ' + protocol + ' and numeroDocumento =  ' + dniPaciente;
+            let query = `
+                SELECT
+                    *
+                FROM
+                    LAB_ResultadoEncabezado
+                WHERE
+                    idProtocolo = ${protocol}
+                    AND numeroDocumento = ${dniPaciente}
+            `;
             let result = await new sql.Request().query(query);
             if (result[0].cda) {
                 return resolve(null); // Si ya tiene el cda no hacer nada
@@ -77,7 +85,15 @@ export function noExistCDA(protocol, dniPaciente) {
 export function setMarkProtocol(protocol, documento, idCda) {
     return new Promise(async function (resolve, reject) {
         try {
-            let query = 'UPDATE LAB_ResultadoEncabezado set cda = ' + '\'' + idCda + '\'' + ' where idProtocolo = ' + protocol + ' and numeroDocumento = ' + documento;
+            let query = `
+                UPDATE
+                    LAB_ResultadoEncabezado
+                SET
+                    cda = '${idCda}'
+                WHERE
+                    idProtocolo = ${protocol}
+                    AND numeroDocumento = ${documento}
+            `;
             let result = await new sql.Request().query(query);
             resolve(result);
         } catch (ex) {
@@ -111,10 +127,28 @@ export function organizacionBySisaCode(code): any {
 export function getEncabezados(documento): any {
     return new Promise(async function (resolve, reject) {
         try {
-            let query = 'select efector.codigoSisa as efectorCodSisa, efector.nombre as efector, encabezado.idEfector as idEfector, encabezado.apellido, encabezado.nombre, encabezado.fechaNacimiento, encabezado.sexo, ' +
-                'encabezado.numeroDocumento, encabezado.fecha, encabezado.idProtocolo, encabezado.solicitante from LAB_ResultadoEncabezado as encabezado ' +
-                'inner join Sys_Efector as efector on encabezado.idEfector = efector.idEfector ' +
-                'where encabezado.numeroDocumento = ' + documento;
+
+            let query = `
+                SELECT
+                    efector.codigoSisa AS efectorCodSisa,
+                    efector.nombre AS efector,
+                    encabezado.idEfector AS idEfector,
+                    encabezado.apellido,
+                    encabezado.nombre,
+                    encabezado.fechaNacimiento,
+                    encabezado.sexo,
+                    encabezado.numeroDocumento,
+                    encabezado.fecha,
+                    encabezado.idProtocolo,
+                    encabezado.solicitante,
+                    encabezado.fecha AS createdAt
+                FROM
+                    LAB_ResultadoEncabezado AS encabezado
+                INNER JOIN
+                    Sys_Efector AS efector ON encabezado.idEfector = efector.idEfector
+                WHERE
+                    encabezado.numeroDocumento =  + ${documento}`;
+
             let result = await new sql.Request().query(query);
             resolve(result);
         } catch (err) {
@@ -127,8 +161,22 @@ export function getEncabezados(documento): any {
 export async function getDetalles(idProtocolo, idEfector) {
     return new Promise(async function (resolve, reject) {
         try {
-            let query = 'select grupo, item, resultado, valorReferencia, observaciones, hiv, profesional_val ' +
-                ' from LAB_ResultadoDetalle as detalle where esTitulo = \'No\' and detalle.idProtocolo = ' + idProtocolo + ' and detalle.idEfector = ' + idEfector;
+            let query = `
+                SELECT
+                    grupo,
+                    item,
+                    resultado,
+                    valorReferencia,
+                    observaciones,
+                    hiv,
+                    profesional_val
+                FROM
+                    LAB_ResultadoDetalle AS detalle
+                WHERE
+                    esTitulo = 'No'
+                    AND detalle.idProtocolo = ${idProtocolo}
+                    AND detalle.idEfector = ${idEfector}
+            `;
             let result = await new sql.Request().query(query);
             resolve(result);
         } catch (err) {

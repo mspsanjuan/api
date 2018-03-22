@@ -17,7 +17,7 @@ import * as pdfGenerator from '../../../utils/pdfGenerator';
 import { Auth } from '../../../auth/auth.class';
 import * as labsImport from '../controller/import-labs';
 
-import { paciente as Paciente, pacienteMpi as PacienteMPI} from '../../../core/mpi/schemas/paciente';
+import { paciente as Paciente, pacienteMpi as PacienteMPI } from '../../../core/mpi/schemas/paciente';
 
 let path = require('path');
 let router = express.Router();
@@ -28,6 +28,102 @@ let connection = {
     server: configPrivate.conSql.serverSql.server,
     database: configPrivate.conSql.serverSql.database
 };
+
+router.get('/laboratorios/:documento', async (req: any, res, next) => {
+
+    // if (!Auth.check(req, 'cdaLaboratorio:get')) {
+    //     return next(403);
+    // }
+
+    try {
+        let documento = req.params.documento; ////// 12948300
+        // pool = await sql.connect(connection);
+        let counter = 0;
+        let laboratorios: any[] = [];
+        let laboratoriosValidados: any[];
+        laboratoriosValidados = await operations.getEncabezados(documento);
+        // console.log((laboratoriosValidados as any).recordsets[0]);
+        (laboratoriosValidados as any).recordsets[0].forEach(async reg => {
+            // let noExisteCdaAsociado = await operations.noExistCDA(reg.idProtocolo, documento);
+            let details = await operations.getDetalles(reg.idProtocolo, reg.idEfector);
+            let organizacion = await operations.organizacionBySisaCode(reg.efectorCodSisa);
+            let paciente = await PacienteMPI.findOne({ documento: documento });
+            // let paciente = await cdaCtr.findOrCreate(req, documento, organizacion.id); // Si el paciente viene con ID está en ANDES/MPI en otro caso es un paciente externo.
+            let fecha = reg.fecha;
+            let profesional = {
+                nombre: reg.solicitante.replace(/(.*) - /, ''),
+                apellido: '' // Nombre y Apellido viene junto en los registros de laboratorio de SQL
+            };
+            let conceptId = '4241000179101'; // informe de laboratorio (elemento de registro)
+            let cie10Laboratorio = {
+                codigo: 'Z01.7', // Código CIE-10: Exámen de Laboratorio
+                nombre: 'Examen de laboratorio'
+            };
+            let texto = 'Exámen de Laboratorio';
+            let uniqueId = String(new mongoose.Types.ObjectId());
+
+            counter = counter + 1;
+            laboratorios.push({
+                paciente: paciente,
+                profesional: profesional,
+                concepto: {
+                    conceptId: conceptId,
+                    semanticTag: 'elemento de registro',
+                    term: 'Exámen de Laboratorio',
+                    fsn: 'Exámen de Laboratorio'
+                },
+                createdAt: moment(reg.createdAt, 'DD/MM/YYYY'),
+                id: uniqueId
+            });
+
+            if (counter === (laboratoriosValidados as any).recordsets[0].length) {
+                let CDAFiles = makeFs();
+                let PDFFiles = makeFs();
+
+                let archivos: any[] = [];
+                let pdf;
+
+                /////// 12948300
+                CDAFiles.find({ 'metadata.paciente': paciente._id, 'contentType': 'application/xml' }, (err, cdas) => {
+
+                    cdas.forEach(async CDA => {
+
+                        await PDFFiles.findOne({ 'metadata.cdaId': String(CDA._id) }, (err2, file) => {
+                            if (err2) {
+                                return next(err2);
+                            }
+                            if (file) {
+                                archivos.push(file);
+                            }
+
+                            if (archivos.length === cdas.length) {
+
+                                res.json({
+                                    cdas: cdas,
+                                    archivos: archivos,
+                                    laboratorios: laboratorios
+                                });
+
+                            }
+                        });
+
+
+                    });
+                });
+
+
+
+
+                // console.log(archivos);
+
+
+            }
+        });
+    } catch (e) {
+        next(e);
+    }
+
+});
 
 // router.get('/testing/migrar', async(req: any, res, next) => {
 //     let skip = parseInt(req.query.skip, 0);
@@ -46,9 +142,9 @@ let connection = {
 /* Dado un paciente, se genera todos los CDA de laboratorio que tenga en SIL Nivel Central
 hacemos esto para luego llamarlo con algún robot en lugar de modificar el software SIL. */
 
-router.post('/laboratorios', async(req: any, res, next) => {
+router.post('/laboratorios', async (req: any, res, next) => {
     if (!Auth.check(req, 'cdaLaboratorio:post')) {
-       return next(403);
+        return next(403);
     }
     try {
         let unPaciente = req.body.paciente;
@@ -85,16 +181,16 @@ router.post('/laboratorios', async(req: any, res, next) => {
                     paciente: paciente.id,
                     prestacion: snomed,
                     fecha: fecha,
-                    adjuntos: [ fileData.data ]
+                    adjuntos: [fileData.data]
                 };
                 let obj = await cdaCtr.storeCDA(uniqueId, cda, metadata);
                 // Marcamos el protocolo (encabezado) como generado, asignando el uniqueId
                 let update = await operations.setMarkProtocol(reg.idProtocolo, unPaciente.documento, uniqueId);
                 counter = counter + 1;
-                list.push({cda: uniqueId, protocolo: reg.idProtocolo});
+                list.push({ cda: uniqueId, protocolo: reg.idProtocolo });
             } else {
                 counter = counter + 1;
-                list.push({cda: 'Ya existe', protocolo: reg.idProtocolo});
+                list.push({ cda: 'Ya existe', protocolo: reg.idProtocolo });
             }
             if (counter === laboratoriosValidados.length) {
                 res.json({

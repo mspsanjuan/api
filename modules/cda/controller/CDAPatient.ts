@@ -19,7 +19,7 @@ import { CDA as CDAConfig } from '../../../config.private';
  * Crea un objeto paciente desde los datos
  */
 
-function dataToPac (dataPaciente, identificador) {
+function dataToPac(dataPaciente, identificador) {
     return {
         apellido: dataPaciente.apellido,
         nombre: dataPaciente.nombre,
@@ -85,7 +85,7 @@ export async function findOrCreate(req, dataPaciente, organizacion) {
                 entidad: organizacion,
                 valor: dataPaciente.id
             });
-            await pacienteCtr.updatePaciente(paciente, {identificadores: paciente.identificadores} , req);
+            await pacienteCtr.updatePaciente(paciente, { identificadores: paciente.identificadores }, req);
         }
         return paciente;
     } else {
@@ -124,7 +124,7 @@ function matchCode(snomed) {
  * Creamos la estructura ICode en base a un CIE10
  * @param cie10
  */
-function icd10Code (cie10) {
+function icd10Code(cie10) {
     return {
         codeSystem: '2.16.840.1.113883.6.90',
         code: cie10.codigo,
@@ -137,7 +137,7 @@ function icd10Code (cie10) {
  * Crea la estructura IID a partir de un ID
  * @param id
  */
-function buildID (id) {
+function buildID(id) {
     return {
         root: rootOID,
         extension: id
@@ -146,7 +146,7 @@ function buildID (id) {
 
 let base64RegExp = /data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,(.*)/;
 
-export function base64toStream (base64) {
+export function base64toStream(base64) {
     let match = base64.match(base64RegExp);
     let mime = match[1];
     let data = match[2];
@@ -164,17 +164,17 @@ export function base64toStream (base64) {
     };
 }
 
-export function storeFile ({extension, mimeType, stream, metadata }) {
+export function storeFile({ extension, mimeType, stream, metadata }) {
     return new Promise((resolve, reject) => {
         let CDAFiles = makeFs();
         let uniqueId = String(new mongoose.Types.ObjectId());
 
         CDAFiles.write({
-                _id: uniqueId,
-                filename:  uniqueId + '.' + extension,
-                contentType: mimeType,
-                metadata
-            },
+            _id: uniqueId,
+            filename: uniqueId + '.' + extension,
+            contentType: mimeType,
+            metadata
+        },
             stream,
             (error, createdFile) => {
                 if (error) {
@@ -191,26 +191,26 @@ export function storeFile ({extension, mimeType, stream, metadata }) {
     });
 }
 
-export function storePdfFile (pdf) {
-    return new Promise(( resolve, reject) => {
+export function storePdfFile(pdf) {
+    return new Promise((resolve, reject) => {
         let uniqueId = String(new mongoose.Types.ObjectId());
         let input = new Stream.PassThrough();
         let mime = 'application/pdf';
         let CDAFiles = makeFs();
         CDAFiles.write({
             _id: uniqueId,
-            filename:  uniqueId + '.pdf',
+            filename: uniqueId + '.pdf',
             contentType: mime
         },
-        input.pipe(pdf),
-        (error, createdFile) => {
-            resolve({
-                id: createdFile._id,
-                data: 'files/' + createdFile.filename,
-                mime: mime
-            });
-        }
-    );
+            input.pipe(pdf),
+            (error, createdFile) => {
+                resolve({
+                    id: createdFile._id,
+                    data: 'files/' + createdFile.filename,
+                    mime: mime
+                });
+            }
+        );
     });
 }
 
@@ -220,18 +220,18 @@ export function storePdfFile (pdf) {
  * @param cdaXml  XML en texto plano
  * @param metadata Datos extras para almacenar con el archivo.
  */
-export function storeCDA (objectID, cdaXml, metadata) {
+export function storeCDA(objectID, cdaXml, metadata) {
     return new Promise((resolve, reject) => {
 
         let input = new Stream.PassThrough();
         let CDAFiles = makeFs();
 
         CDAFiles.write({
-                _id: objectID,
-                filename:  objectID + '.xml',
-                contentType: 'application/xml',
-                metadata
-            },
+            _id: objectID,
+            filename: objectID + '.xml',
+            contentType: 'application/xml',
+            metadata
+        },
             input,
             (error, createdFile) => {
                 resolve(createdFile);
@@ -339,7 +339,7 @@ export function generateCDA(uniqueId, confidentiality, patient, date, author, or
  * Listado de CDA por metadata
  * @param conds
  */
-export function findByMetadata (conds) {
+export function findByMetadata(conds) {
     let CDAFiles = makeFs();
     return CDAFiles.find(conds);
 }
@@ -349,10 +349,10 @@ export function findByMetadata (conds) {
  * listado de CDA por paciente y tipo de prestación
  */
 
-export function searchByPatient (pacienteId, prestacion, { limit, skip  }): Promise<any[]> {
+export function searchByPatient(pacienteId, prestacion, { limit, skip }): Promise<any[]> {
     return new Promise(async (resolve, reject) => {
         let CDAFiles = makeFs();
-        let conditions: any = { 'metadata.paciente':  mongoose.Types.ObjectId(pacienteId) };
+        let conditions: any = { 'metadata.paciente': mongoose.Types.ObjectId(pacienteId) };
         if (prestacion) {
             conditions['metadata.prestacion'] = prestacion;
         }
@@ -363,7 +363,7 @@ export function searchByPatient (pacienteId, prestacion, { limit, skip  }): Prom
             skip = 0;
         }
         try {
-            let list = await CDAFiles.find(conditions).sort({'metadata.fecha': -1}).limit(limit).skip(skip);
+            let list = await CDAFiles.find(conditions).sort({ 'metadata.fecha': -1 }).limit(limit).skip(skip);
             list = list.map(item => {
                 let data = item.metadata;
                 data.cda_id = item._id;
@@ -371,7 +371,7 @@ export function searchByPatient (pacienteId, prestacion, { limit, skip  }): Prom
                 return item.metadata;
             });
 
-            return resolve (list);
+            return resolve(list);
         } catch (e) {
             return reject(e);
         }
@@ -382,10 +382,10 @@ export function searchByPatient (pacienteId, prestacion, { limit, skip  }): Prom
 /**
  * Levante el XML a partir de un ID cd CDA
  */
-export async function loadCDA (cdaID) {
+export async function loadCDA(cdaID) {
     return new Promise(async (resolve, reject) => {
         let CDAFiles = makeFs();
-        var stream1  = CDAFiles.readById(cdaID, function (err, buffer) {
+        var stream1 = CDAFiles.readById(cdaID, function (err, buffer) {
             let xml = buffer.toString('utf8');
             return resolve(xml);
         });

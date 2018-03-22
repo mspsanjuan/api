@@ -169,7 +169,12 @@ export default [
         key: 'cda',
         title: 'Modulo CDA',
         child: [
-            { key: 'get', title: 'Leer CDA', type: 'boolean' },
+            {
+                key: 'get', title: 'Leer CDA', type: 'boolean',
+                child: [
+                    { key: 'laboratorios', title: 'Lectura', type: 'boolean' }
+                ]
+            },
             { key: 'list', title: 'Listar CDA por paciente', type: 'boolean' },
             { key: 'post', title: 'Generar CDA', type: 'boolean' },
         ]
