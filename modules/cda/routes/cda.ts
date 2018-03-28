@@ -111,8 +111,8 @@ router.get('/files/:name', async (req: any, res, next) => {
     let name = req.params.name;
     let CDAFiles = makeFs();
 
-    CDAFiles.findOne({filename: name}).then(async file => {
-        let stream1  = await CDAFiles.readById(file._id);
+    CDAFiles.findOne({ filename: name }).then(async file => {
+        let stream1 = await CDAFiles.readById(file._id);
         res.contentType(file.contentType);
         stream1.pipe(res);
     }).catch(next);
@@ -151,7 +151,7 @@ router.get('/paciente/:id', async (req: any, res, next) => {
     let pacienteID = req.params.id;
     let prestacion = req.query.prestacion;
 
-    let list = await cdaCtr.searchByPatient(pacienteID, prestacion, {skip: 0, limit: 10});
+    let list = await cdaCtr.searchByPatient(pacienteID, prestacion, { skip: 0, limit: 10 });
     res.json(list);
 });
 

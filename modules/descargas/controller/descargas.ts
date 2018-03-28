@@ -12,7 +12,7 @@ export class Documento {
     /**
      * Opciones default de PDF rendering
      */
-    private static options = {
+    private static options: any = {
         format: 'A4',
         border: {
             // default is 0, units: mm, cm, in, px
