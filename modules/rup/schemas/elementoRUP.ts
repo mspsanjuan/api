@@ -48,6 +48,7 @@ export let schema = new mongoose.Schema({
                 },
                 cssClass: String
             },
+            permisos: [ String ],
             // Indica parámetros para la instancia del elementoRUP en formato {key: value}
             params: {
                 type: mongoose.Schema.Types.Mixed,
