@@ -78,6 +78,15 @@ export let schema = new mongoose.Schema({
         }
     },
 
+    /**
+     * Sistema Recursivo, Prestación que  tiene más prestaciones adentro. 
+     * En este caso el hijo posee referencia del padre.
+     */
+    perteneceA: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'prestacion'
+    },
+
     // Datos de la ejecución (i.e. realización)
     ejecucion: {
         // Fecha de ejecución

@@ -109,6 +109,12 @@ router.get('/prestaciones/:id*?', function (req, res, next) {
         if (req.query.solicitudHasta) {
             query.where('solicitud.fecha').lte(moment(req.query.solicitudHasta).endOf('day').toDate() as any);
         }
+
+        if (req.query.perteneceA) {
+            query.where('perteneceA'). equals( mongoose.Types.ObjectId(req.query.perteneceA) );
+        } else {
+            query.where('perteneceA').equals(null);
+        }
         // Solicitudes generadas desde puntoInicio Ventanilla
         // Solicitudes que no tienen prestacionOrigen ni turno
         // Si tienen prestacionOrigen son generadas por RUP y no se listan
@@ -278,8 +284,8 @@ router.patch('/prestaciones/:id', function (req, res, next) {
                 res.json(prestacion);
             }
 
-            Auth.audit(data, req);
             /*
+            Auth.audit(data, req);
             Logger.log(req, 'prestacionPaciente', 'update', {
                 accion: req.body.op,
                 ruta: req.url,

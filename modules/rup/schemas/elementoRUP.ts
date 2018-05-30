@@ -26,6 +26,13 @@ export let schema = new mongoose.Schema({
         required: true,
         default: false
     },
+
+    // Indica si admite prestaciones hijas
+    multiprestacion: {
+        type: Boolean,
+        required: false
+    },
+
     // Conceptos SNOMED relacionados que se muestran e implementan de la misma manera.
     // Por ejemplo: "Toma de temperatura del paciente (SCTID: 56342008)" y
     //              "Toma de temperatura rectal del paciente (SCTID: 18649001")
