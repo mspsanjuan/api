@@ -26,6 +26,19 @@ export let schema = new mongoose.Schema({
         required: true,
         default: false
     },
+    params: {
+        type: mongoose.Schema.Types.Mixed,
+        validate: {
+            validator(value) {
+                if (value === null) {
+                    return true;
+                } else {
+                    return Object.isObject(value);
+                }
+            },
+            message: '{VALUE} is not a valid object'
+        }
+    },
     // Conceptos SNOMED relacionados que se muestran e implementan de la misma manera.
     // Por ejemplo: "Toma de temperatura del paciente (SCTID: 56342008)" y
     //              "Toma de temperatura rectal del paciente (SCTID: 18649001")
