@@ -380,6 +380,7 @@ router.patch('/agenda/:id*?', function (req, res, next) {
                     if (req.body.op === 'codificarTurno') {
                         agendaCtrl.codificarTurno(req, data, t[0]).then(() => {
                             Auth.audit(data[0], req);
+
                             data[0].save(function (error) {
                                 Logger.log(req, 'citas', 'update', {
                                     accion: req.body.op,
@@ -392,8 +393,11 @@ router.patch('/agenda/:id*?', function (req, res, next) {
                                     return next(error);
                                 }
                             });
-                        }).catch(err2 => { return next(err2); });
+                        }).catch(err2 => {
+                            return next(err2);
+                        });
                     }
+
                 } else {
                     agenda.find({ 'sobreturnos._id': mongoose.Types.ObjectId(t[0]) }, function (err2, data2) {
                         if (err2) {
@@ -416,11 +420,9 @@ router.patch('/agenda/:id*?', function (req, res, next) {
                                 });
                             }).catch(err3 => { return next(err3); });
                         }
+
                     });
                 }
-                // Inserto la modificación en agendasCache
-                operations.cacheTurnosSips(data).catch(error => { return next(error); });
-                // Fin de insert cache
                 return res.json(data[0]);
             });
         }
