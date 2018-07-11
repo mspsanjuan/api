@@ -109,6 +109,11 @@ router.get('/prestaciones/:id*?', function (req, res, next) {
         if (req.query.solicitudHasta) {
             query.where('solicitud.fecha').lte(moment(req.query.solicitudHasta).endOf('day').toDate() as any);
         }
+
+        if (req.query.tipoPrestaciones) {
+            query.where('solicitud.tipoPrestacion.conceptId').in(req.query.tipoPrestaciones);
+        }
+
         // Solicitudes generadas desde puntoInicio Ventanilla
         // Solicitudes que no tienen prestacionOrigen ni turno
         // Si tienen prestacionOrigen son generadas por RUP y no se listan
@@ -181,6 +186,9 @@ router.patch('/prestaciones/:id', function (req, res, next) {
                 }
                 if (req.body.registros) {
                     data.ejecucion.registros = req.body.registros;
+                }
+                if (req.body.ejecucion && req.body.ejecucion.fecha) {
+                    data.ejecucion.fecha = req.body.ejecucion.fecha;
                 }
                 break;
             case 'romperValidacion':
