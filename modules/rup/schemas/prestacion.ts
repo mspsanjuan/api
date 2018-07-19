@@ -5,6 +5,7 @@ import * as registro from './prestacion.registro';
 import * as estado from './prestacion.estado';
 import { auditoriaPrestacionPacienteSchema } from '../../auditorias/schemas/auditoriaPrestacionPaciente';
 import { iterate, convertToObjectId } from '../controllers/rup';
+import { obraSocial } from '../../obraSocial/schemas/obraSocial'
 
 export let schema = new mongoose.Schema({
     // Datos principales del paciente
@@ -75,6 +76,9 @@ export let schema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'prestacion'
         },
+
+        // Obra social
+        obraSocial: obraSocial.schema,
     },
 
     // Datos de la ejecución (i.e. realización)
