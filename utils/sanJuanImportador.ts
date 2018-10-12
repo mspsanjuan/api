@@ -4,10 +4,9 @@ import * as xlsx from 'node-xlsx';
 juandesImport();
 
 export function juandesImport() {
-    let padron: any = xlsx.parse('/andes/api/padron.xlsx', { sheetRows: 13805 });
+    let padron: any = xlsx.parse('/andes/api/padron.xlsx', { sheetRows: 13804 });
     let datos: [any] = padron[0].data;
-    console.log(datos.shift);
-
+    let count = 0;
     datos.forEach((pacienteSanJuan: any) => {
         let sexoSanJuan = pacienteSanJuan[4] ? pacienteSanJuan[4].toString().toLowerCase() : null;
         sexoSanJuan = sexoSanJuan === 'indeterminado' ? 'otro' : sexoSanJuan;
@@ -106,7 +105,8 @@ export function juandesImport() {
             carpetaEfectores: carpetaSanJuan
         };
 
-        console.log(newPaciente);
+        count++;
     });
+    console.log(count + ' pacientes importados');
 
 }
