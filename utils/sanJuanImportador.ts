@@ -8,19 +8,22 @@ import { paciente } from '../core/mpi/schemas/paciente';
 import * as xlsx from 'node-xlsx';
 // tslint:disable-next-line:no-implicit-dependencies
 import { Auth } from '../auth/auth.class';
-
+import { getServicioRenaper } from './servicioRenaper';
+import { matchSisa } from './servicioSisa';
+import moment = require('moment');
 // const Auth = require('../auth/auth.class');
 const Config = require('../config.private');
 const userScheduler = Config.userScheduler;
+const regtest = /[^a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ ']+/;
 
 juandesImport();
 
 
-export function juandesImport() {
+export async function juandesImport() {
     let padron: any = xlsx.parse('/andes/api/padron.xlsx', { sheetRows: 13804 });
-    let datos: [any] = padron[0].data;
+    let datos: any = padron[0].data;
     let count = 0;
-    datos.forEach(async (pacienteSanJuan: any) => {
+    for (let pacienteSanJuan of datos) {
         let sexoSanJuan = pacienteSanJuan[4] ? pacienteSanJuan[4].toString().toLowerCase() : null;
         sexoSanJuan = sexoSanJuan === 'indeterminado' ? 'otro' : sexoSanJuan;
         let cuilSanJuan = pacienteSanJuan[5] !== 'NULL' ? pacienteSanJuan[5] : '';
@@ -51,10 +54,27 @@ export function juandesImport() {
             calleNumero = calleNumero + ' ' + pacienteSanJuan[17];
         }
 
-        let paisSanJuan = { nombre: pacienteSanJuan[8] !== 'NULL' ? pacienteSanJuan[8] : null };
-        let provinciaSanJuan = { nombre: pacienteSanJuan[9] !== 'NULL' ? pacienteSanJuan[9] : null };
-        let localidadSanJuan = { nombre: pacienteSanJuan[11] !== 'NULL' ? pacienteSanJuan[11] : null };
-        let barrioSanJuan = { nombre: pacienteSanJuan[12] !== 'NULL' ? pacienteSanJuan[12] : null };
+        let paisSanJuan = null;
+        if (pacienteSanJuan[8] !== 'NULL') {
+            paisSanJuan = { nombre: pacienteSanJuan[8] };
+        }
+        let provinciaSanJuan = null;
+        if (pacienteSanJuan[9] !== 'NULL') {
+            provinciaSanJuan = { nombre: pacienteSanJuan[9] };
+        }
+        let localidadSanJuan = null;
+        if (pacienteSanJuan[11] !== 'NULL') {
+            localidadSanJuan = {
+                nombre: pacienteSanJuan[11]
+            };
+        }
+        let barrioSanJuan = null;
+        if (pacienteSanJuan[12] !== 'NULL') {
+            barrioSanJuan = {
+                nombre: pacienteSanJuan[12]
+            };
+        }
+
         let direccionSanJuan = [{
             valor: calleNumero || '',
             ubicacion: {
@@ -103,8 +123,10 @@ export function juandesImport() {
             };
             carpetaSanJuan.push(nuevaCarpeta);
         }
-
+        // Ojo, algunos pacientes del SAN JUAN tienen la fecha de nacimiento en 'NULL'
+        let fechaNacimientoSanjuan = (pacienteSanJuan[6] !== 'NULL') ? new Date(pacienteSanJuan[6]) : null;
         let newPaciente = {
+
             documento: pacienteSanJuan[3],
             nombre: pacienteSanJuan[1],
             apellido: pacienteSanJuan[0],
@@ -112,18 +134,54 @@ export function juandesImport() {
             genero: sexoSanJuan,
             cuil: cuilSanJuan,
             estado: 'temporal',
-            fechaNacimiento: new Date(pacienteSanJuan[6]),
+            fechaNacimiento: fechaNacimientoSanjuan,
             estadoCivil: estadoCivilSanJuan,
             direccion: direccionSanJuan,
             contacto: contactoSanJuan,
             carpetaEfectores: carpetaSanJuan
         };
+        try {
+            let resRenaper: any = await getServicioRenaper({ newPaciente });
 
-        let nuevopac = new paciente(newPaciente);
-        Auth.audit(nuevopac, (userScheduler as any));
-        await nuevopac.save();
-    });
+            if (resRenaper && resRenaper.datos.nroError === 0) {
+                let pacienteRenaper = resRenaper.dataRenaper;
+                let band = regtest.test(pacienteRenaper.nombres);
+                band = band || regtest.test(pacienteRenaper.apellido);
+                if (!band) {
+                    newPaciente.nombre = pacienteRenaper.nombres;
+                    newPaciente.apellido = pacienteRenaper.apellido;
+                    newPaciente.fechaNacimiento = new Date(pacienteRenaper.fechaNacimiento);
+                    newPaciente.cuil = pacienteRenaper.cuil;
+                    newPaciente.estado = 'validado';
+                } else {
+                    try {
+                        let resSisa: any = await matchSisa(newPaciente);
+                        let porcentajeMatcheo = resSisa.matcheos.matcheo;
+                        if (porcentajeMatcheo > 95) {
+                            newPaciente.nombre = resSisa.matcheos.datosPaciente.nombre;
+                            newPaciente.apellido = resSisa.matcheos.datosPaciente.apellido;
+                            newPaciente.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
+                            newPaciente.estado = 'validado';
 
-    count++;
+                        }
+                    } catch (error) {
+                        console.log('ERROR SISA ---->', error);
+                    }
 
+                }
+
+            }
+        } catch (error) {
+            console.log('ERROR ---->', error);
+        }
+        if (newPaciente.fechaNacimiento) {
+            let nuevopac = new paciente(newPaciente);
+            Auth.audit(nuevopac, (userScheduler as any));
+            await nuevopac.save();
+        } else {
+            console.log('PACIENTE SIN FECHA DE NACIMIENTO, NO INSERTADO');
+        }
+        count++;
+    }
+    console.log('FIN, cantidad de pacientes migrados: ', count);
 }
