@@ -1,13 +1,26 @@
-import { pacienteMpi, paciente } from '../core/mpi/schemas/paciente';
+
+import { Connections } from '../connections';
+
+
+Connections.initialize();
+import { paciente } from '../core/mpi/schemas/paciente';
+
 import * as xlsx from 'node-xlsx';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Auth } from '../auth/auth.class';
+
+// const Auth = require('../auth/auth.class');
+const Config = require('../config.private');
+const userScheduler = Config.userScheduler;
 
 juandesImport();
+
 
 export function juandesImport() {
     let padron: any = xlsx.parse('/andes/api/padron.xlsx', { sheetRows: 13804 });
     let datos: [any] = padron[0].data;
     let count = 0;
-    datos.forEach((pacienteSanJuan: any) => {
+    datos.forEach(async (pacienteSanJuan: any) => {
         let sexoSanJuan = pacienteSanJuan[4] ? pacienteSanJuan[4].toString().toLowerCase() : null;
         sexoSanJuan = sexoSanJuan === 'indeterminado' ? 'otro' : sexoSanJuan;
         let cuilSanJuan = pacienteSanJuan[5] !== 'NULL' ? pacienteSanJuan[5] : '';
@@ -96,8 +109,9 @@ export function juandesImport() {
             nombre: pacienteSanJuan[1],
             apellido: pacienteSanJuan[0],
             sexo: sexoSanJuan,
+            genero: sexoSanJuan,
             cuil: cuilSanJuan,
-            estado: 'activo',
+            estado: 'temporal',
             fechaNacimiento: new Date(pacienteSanJuan[6]),
             estadoCivil: estadoCivilSanJuan,
             direccion: direccionSanJuan,
@@ -105,8 +119,11 @@ export function juandesImport() {
             carpetaEfectores: carpetaSanJuan
         };
 
-        count++;
+        let nuevopac = new paciente(newPaciente);
+        Auth.audit(nuevopac, (userScheduler as any));
+        await nuevopac.save();
     });
-    console.log(count + ' pacientes importados');
+
+    count++;
 
 }
