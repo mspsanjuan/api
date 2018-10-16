@@ -11,6 +11,8 @@ import { Auth } from '../auth/auth.class';
 import { getServicioRenaper } from './servicioRenaper';
 import { matchSisa } from './servicioSisa';
 import moment = require('moment');
+import { ElasticSync } from './elasticSync';
+import { Logger } from './logService';
 // const Auth = require('../auth/auth.class');
 const Config = require('../config.private');
 const userScheduler = Config.userScheduler;
@@ -171,15 +173,18 @@ export async function juandesImport() {
                 }
 
             }
+            if (newPaciente.fechaNacimiento) {
+                let nuevopac = new paciente(newPaciente);
+                Auth.audit(nuevopac, (userScheduler as any));
+                await nuevopac.save();
+                const connElastic = new ElasticSync();
+                await connElastic.create(nuevopac._id.toString(), nuevopac);
+                Logger.log((userScheduler as any), 'mpi', 'insert', nuevopac);
+            } else {
+                console.log('PACIENTE SIN FECHA DE NACIMIENTO, NO INSERTADO');
+            }
         } catch (error) {
             console.log('ERROR ---->', error);
-        }
-        if (newPaciente.fechaNacimiento) {
-            let nuevopac = new paciente(newPaciente);
-            Auth.audit(nuevopac, (userScheduler as any));
-            await nuevopac.save();
-        } else {
-            console.log('PACIENTE SIN FECHA DE NACIMIENTO, NO INSERTADO');
         }
         count++;
     }
