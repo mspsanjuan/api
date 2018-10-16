@@ -1,6 +1,7 @@
 import { defaultLimit, maxLimit } from './../../../config';
 import * as express from 'express';
 import { profesional } from '../schemas/profesional';
+import { profesion } from '../schemas/profesion_model';
 import * as utils from '../../../utils/utils';
 import * as fs from 'fs';
 import { makeFs } from '../schemas/imagenes';
@@ -13,6 +14,7 @@ import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMat
 
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
+import moment = require('moment');
 
 
 let router = express.Router();
@@ -633,6 +635,99 @@ router.post('/profesionales/formacionCero', async (req, res, next) => {
     let ress = await formacionCero();
     res.json(ress);
 
+});
+
+
+router.post('/profesionales/exportSisa', async (req, res, next) => {
+
+    let profesionaleSisaTotal = [];
+    let aggregate = profesional.aggregate(
+        [
+            {
+                $unwind: '$formacionGrado'
+            }
+            , {
+                $match: {
+                    'formacionGrado.exportadoSisa': false
+                }
+            },
+
+        ]);
+
+    let datos = await toArray(aggregate.cursor({}).exec());
+    for (let index = 0; index < datos.length; index++) {
+        let profesionalSisa = {
+
+        };
+
+        const unProfesional = datos[index];
+        profesionalSisa['id_profesional'] = '';
+        profesionalSisa['id_profesional_profesion'] = '';
+        profesionalSisa['id_profesional_matricula'] = '';
+        profesionalSisa['id_tipodoc'] = 1;
+        profesionalSisa['nrodoc'] = unProfesional.documento;
+        profesionalSisa['nombre'] = unProfesional.nombre;
+        profesionalSisa['apellido'] = unProfesional.apellido;
+        profesionalSisa['sexo'] = unProfesional.sexo === 'femenino' ? 'F' : 'M';
+        profesionalSisa['fecha_nacimiento'] = moment(unProfesional.fechaNacimiento).format('DD/MM/YYYY');
+        profesionalSisa['id_pais_nacimiento'] = 0;
+        profesionalSisa['id_loc_nacimiento'] = 0;
+        profesionalSisa['id_pais'] = 0;
+        profesionalSisa['calle'] = 'falta';
+        profesionalSisa['calle_nro'] = 'falta';
+        profesionalSisa['calle_piso'] = 'falta';
+        profesionalSisa['calle_dpto'] = 'falta';
+        profesionalSisa['id_localidad'] = 0;
+        profesionalSisa['id_provincia'] = 0;
+        profesionalSisa['id_pais'] = 200;
+        profesionalSisa['tiene_telefono'] = '';
+        profesionalSisa['id_tipo_te1'] = '';
+        profesionalSisa['id_tipo_te2'] = '';
+        profesionalSisa['id_tipo_te3'] = '';
+        profesionalSisa['id_tipo_te4'] = '';
+        profesionalSisa['te1'] = '';
+        profesionalSisa['te2'] = '';
+        profesionalSisa['te3'] = '';
+        profesionalSisa['te4'] = '';
+        profesionalSisa['libro'] = '';
+        profesionalSisa['folio'] = '';
+        profesionalSisa['acta'] = '';
+        profesionalSisa['libro'] = '';
+        profesionalSisa['acta'] = '';
+        profesionalSisa['expediente'] = '';
+        let email = unProfesional.contactos.find(x => x.tipo === 'email');
+        if (email) {
+            profesionalSisa['email'] = email.valor;
+        } else {
+            profesionalSisa['email'] = '';
+        }
+        profesionalSisa['email2'] = '';
+        profesionalSisa['cuil'] = unProfesional.cuit;
+        profesionalSisa['fallecido'] = 'NO';
+        // consultar
+        profesionalSisa['fecha_fallecido'] = 'NO';
+        profesionalSisa['habilitado'] = unProfesional.habilitado;
+        let profesionDeReferencia: any = await profesion.find({ codigo: unProfesional.formacionGrado.profesion.codigo }, (data: any) => { return data; });
+        profesionalSisa['id_profesion_referencia'] = profesionDeReferencia[0].profesionCodigoRef;
+        profesionalSisa['id_profesion'] = unProfesional.formacionGrado.profesion.codigo;
+        profesionalSisa['titulo'] = unProfesional.formacionGrado.profesion.titulo;
+        profesionalSisa['id_institucion_formadora'] = 'falta';
+        profesionalSisa['fecha_titulo'] = 'falta';
+        profesionalSisa['id_institucion_sede'] = '';
+        profesionalSisa['revalida'] = 'NO';
+        profesionalSisa['id_institucion_revalida'] = '';
+        profesionalSisa['fecha_revalida'] = '';
+        profesionalSisa['id_provincia_matricula'] = 15;
+        console.log(unProfesional.formacionGrado.matriculacion);
+        if (unProfesional.formacionGrado.matriculacion) {
+            profesionalSisa['matricula'] = unProfesional.formacionGrado.matriculacion[unProfesional.formacionGrado.matriculacion.length - 1].matriculaNumero;
+        }
+
+
+        profesionaleSisaTotal.push(profesionalSisa);
+    }
+
+    res.status(201).json(profesionaleSisaTotal);
 });
 
 // router.post('/profesionales/vencimientoPosGrado', async (req, res, next) => {

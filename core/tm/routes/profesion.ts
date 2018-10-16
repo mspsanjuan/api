@@ -1,5 +1,5 @@
 import * as express from 'express';
-import * as profesion from '../schemas/profesion_model';
+import { profesion } from '../schemas/profesion_model';
 
 const router = express.Router();
 

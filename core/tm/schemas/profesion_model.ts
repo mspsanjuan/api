@@ -3,6 +3,5 @@ import * as profesionSchema from './profesion';
 
 // Virtuals
 
-const profesion = mongoose.model('profesion', profesionSchema, 'profesion');
 
-export = profesion;
+export const profesion = mongoose.model('profesion', profesionSchema, 'profesion');
