@@ -143,11 +143,12 @@ export async function juandesImport() {
             carpetaEfectores: carpetaSanJuan
         };
         try {
-            let resRenaper: any = await getServicioRenaper({ newPaciente });
-
+            let sexoRena = newPaciente.sexo === 'masculino' ? 'M' : 'F';
+            let resRenaper: any = await getServicioRenaper({ documento: newPaciente.documento, sexo: sexoRena });
+            let band = true;
             if (resRenaper && resRenaper.datos.nroError === 0) {
-                let pacienteRenaper = resRenaper.dataRenaper;
-                let band = regtest.test(pacienteRenaper.nombres);
+                let pacienteRenaper = resRenaper.datos;
+                band = regtest.test(pacienteRenaper.nombres);
                 band = band || regtest.test(pacienteRenaper.apellido);
                 if (!band) {
                     newPaciente.nombre = pacienteRenaper.nombres;
@@ -155,21 +156,22 @@ export async function juandesImport() {
                     newPaciente.fechaNacimiento = new Date(pacienteRenaper.fechaNacimiento);
                     newPaciente.cuil = pacienteRenaper.cuil;
                     newPaciente.estado = 'validado';
-                } else {
-                    try {
-                        let resSisa: any = await matchSisa(newPaciente);
-                        let porcentajeMatcheo = resSisa.matcheos.matcheo;
-                        if (porcentajeMatcheo > 95) {
-                            newPaciente.nombre = resSisa.matcheos.datosPaciente.nombre;
-                            newPaciente.apellido = resSisa.matcheos.datosPaciente.apellido;
-                            newPaciente.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
-                            newPaciente.estado = 'validado';
+                }
 
-                        }
-                    } catch (error) {
-                        console.log('ERROR SISA ---->', error);
+            }
+            if (!resRenaper || resRenaper.datos.nroError !== 0 || band) {
+                try {
+                    let resSisa: any = await matchSisa(newPaciente);
+                    let porcentajeMatcheo = resSisa.matcheos.matcheo;
+                    if (porcentajeMatcheo > 95) {
+                        newPaciente.nombre = resSisa.matcheos.datosPaciente.nombre;
+                        newPaciente.apellido = resSisa.matcheos.datosPaciente.apellido;
+                        newPaciente.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
+                        newPaciente.estado = 'validado';
+
                     }
-
+                } catch (error) {
+                    console.log('ERROR SISA ---->', error);
                 }
 
             }
@@ -178,8 +180,12 @@ export async function juandesImport() {
                 Auth.audit(nuevopac, (userScheduler as any));
                 await nuevopac.save();
                 const connElastic = new ElasticSync();
-                await connElastic.create(nuevopac._id.toString(), nuevopac);
+
+                const nuevoPacienteElastic = JSON.parse(JSON.stringify(nuevopac));
+                delete nuevoPacienteElastic._id;
+                await connElastic.create(nuevopac._id.toString(), nuevoPacienteElastic);
                 Logger.log((userScheduler as any), 'mpi', 'insert', nuevopac);
+                console.log('NUEVO PACIENTE --------__>:::', newPaciente.documento);
             } else {
                 console.log('PACIENTE SIN FECHA DE NACIMIENTO, NO INSERTADO');
             }
