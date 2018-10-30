@@ -19,4 +19,4 @@ export let pacienteFederadoSchema = new mongoose.Schema({
     }
 });
 
-export let pacienteFederado = mongoose.model('pacientesFederados', pacienteFederadoSchema, 'pacientesFederados');
+export let pacienteFederado = mongoose.model('pacienteFederado', pacienteFederadoSchema, 'pacienteFederado');

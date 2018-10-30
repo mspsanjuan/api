@@ -1,5 +1,5 @@
 import { pacienteMpi } from '../schemas/paciente';
-import { pacienteFederado} from '../schemas/pacienteFederado';
+import { pacienteFederado } from '../schemas/pacienteFederado';
 const request = require('request');
 import * as Fhir from '../../../packages/fhir/src/patient';
 
@@ -17,10 +17,10 @@ export async function federadorjob(done) {
                     system: 'urn:oid:2.16.840.1.113883.2.10.35',
                     value: pac.documento // cambiar por _id cuando se resulva
                 },
-                    {
-                        system: 'http://www.renaper.gob.ar/dni',
-                        value: pac.documento
-                    }];
+                {
+                    system: 'http://www.renaper.gob.ar/dni',
+                    value: pac.documento
+                }];
                 paciente_federador['identifier'] = identificadores;
                 delete paciente_federador['active'];
                 delete paciente_federador['deceasedDateTime'];
@@ -83,13 +83,13 @@ export function post_federador(data: any, identificador: String) {
                 // Se guardan los datos en pacientes_federados
                 return resolve(body);
             }
-            let pac_federado = new pacienteFederado({
+            const pac_federado = new pacienteFederado({
                 documento: identificador,
                 respuesta,
                 body: response.body
 
             });
-            pacienteFederado.save(pac_federado);
+            pac_federado.save();
             return resolve(error || body);
         });
     });
