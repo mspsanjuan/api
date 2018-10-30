@@ -27,7 +27,7 @@ export class Documento {
     /**
      * Opciones default de PDF rendering
      */
-    private static options: pdf.CreateOptions = {};
+    protected options: pdf.CreateOptions = {};
 
     /**
      *
@@ -247,7 +247,7 @@ export class Documento {
         }
     }
 
-    private static async generarHTML(req) {
+    protected static async generarHTML(req) {
 
         // Prestación
         let prestacion: any = await this.getPrestacionData(req.body.idPrestacion);
@@ -431,7 +431,7 @@ export class Documento {
         }
     }
 
-    private static generarCSS() {
+    public generarCSS() {
         // Se agregan los estilos CSS
         let scssFile = path.join(__dirname, '../../../templates/rup/informes/sass/main.scss');
 
@@ -453,7 +453,7 @@ export class Documento {
      * @param next ExpressJS next
      * @param options html-pdf/PhantonJS rendering options
      */
-    static descargar(req, res, next, options = null) {
+    public descargar(req, res, next, options = null) {
 
         return new Promise((resolve, reject) => {
 
@@ -483,7 +483,7 @@ export class Documento {
 
                     this.options = options || phantomPDFOptions;
 
-                    this.generarHTML(req).then(htmlPDF => {
+                    Documento.generarHTML(req).then(htmlPDF => {
                         htmlPDF = htmlPDF + this.generarCSS();
                         pdf.create(htmlPDF, this.options).toFile((err2, file): any => {
 

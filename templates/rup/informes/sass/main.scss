@@ -321,6 +321,31 @@ footer {
     }
 }
 
+
+
+
+.table {
+    tr{
+        margin: 0; 
+        padding: 0;
+    }
+    tr th{
+    border: 1px solid;
+    font-size: .275cm;
+    padding: 5px;
+    margin: 0; 
+
+}
+
+ tr td{
+    border: 1px solid;
+    font-size: 0.25cm;
+    padding: 2px;
+    margin: 0; 
+
+}
+}
+
 // Media query
 // @media screen and (min-width: 980px) {
 //     .contenedor-zocalo {
