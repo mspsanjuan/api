@@ -685,7 +685,9 @@ router.post('/profesionales/exportSisa', async (req, res, next) => {
         profesionalSisa['id_tipo_te2'] = '';
         profesionalSisa['id_tipo_te3'] = '';
         profesionalSisa['id_tipo_te4'] = '';
-        profesionalSisa['te1'] = '';
+
+        let telefono = unProfesional.contactos.find(x => x.tipo === 'celular' || x.tipo === 'fijo' );
+        profesionalSisa['te1'] = telefono.valor;
         profesionalSisa['te2'] = '';
         profesionalSisa['te3'] = '';
         profesionalSisa['te4'] = '';
@@ -710,18 +712,34 @@ router.post('/profesionales/exportSisa', async (req, res, next) => {
         let profesionDeReferencia: any = await profesion.find({ codigo: unProfesional.formacionGrado.profesion.codigo }, (data: any) => { return data; });
         profesionalSisa['id_profesion_referencia'] = profesionDeReferencia[0].profesionCodigoRef;
         profesionalSisa['id_profesion'] = unProfesional.formacionGrado.profesion.codigo;
-        profesionalSisa['titulo'] = unProfesional.formacionGrado.profesion.titulo;
-        profesionalSisa['id_institucion_formadora'] = 'falta';
-        profesionalSisa['fecha_titulo'] = 'falta';
+        console.log(unProfesional.formacionGrado.titulo);
+
+        profesionalSisa['titulo'] = unProfesional.formacionGrado.titulo;
+        let codigoInstitucion = unProfesional.formacionGrado.entidadFormadora.codigo;
+        if (!codigoInstitucion) {
+            codigoInstitucion = 0;
+        }
+        profesionalSisa['id_institucion_formadora'] = codigoInstitucion;
+        profesionalSisa['fecha_titulo'] = moment(unProfesional.formacionGrado.fechaEgreso).format('DD/MM/YYYY');
         profesionalSisa['id_institucion_sede'] = '';
         profesionalSisa['revalida'] = 'NO';
         profesionalSisa['id_institucion_revalida'] = '';
         profesionalSisa['fecha_revalida'] = '';
         profesionalSisa['id_provincia_matricula'] = 15;
-        console.log(unProfesional.formacionGrado.matriculacion);
         if (unProfesional.formacionGrado.matriculacion) {
             profesionalSisa['matricula'] = unProfesional.formacionGrado.matriculacion[unProfesional.formacionGrado.matriculacion.length - 1].matriculaNumero;
         }
+        profesionalSisa['fecha_matricula'] = moment(unProfesional.formacionGrado.fechaDeInscripcion).format('DD/MM/YYYY');
+        profesionalSisa['id_situacion_matricula'] = 1;
+        profesionalSisa['comentario'] = '';
+        profesionalSisa['sss'] = '';
+        profesionalSisa['sss_certificado'] = '';
+        profesionalSisa['sss_fecha'] = '';
+        profesionalSisa['id_sss_fecha'] = '';
+        profesionalSisa['id_sss_provincia'] = '';
+        profesionalSisa['id_sss_provincia2'] = '';
+        profesionalSisa['id_sss_provincia3'] = '';
+        profesionalSisa['rematriculacion'] = '';
 
 
         profesionaleSisaTotal.push(profesionalSisa);
