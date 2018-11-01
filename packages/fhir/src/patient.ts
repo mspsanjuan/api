@@ -39,7 +39,9 @@ export function encode(patient) {
                     break;
             }
             return cont;
+
         }) : [];
+
         // Parsea direcciones
         let direcciones = data.direccion ? data.direccion.map(unaDireccion => {
             let direc = {
@@ -56,7 +58,7 @@ export function encode(patient) {
         let relaciones = data.relaciones ? data.relaciones.map(unaRelacion => {
             let relacion = {
                 relationship: [{
-                    text: unaRelacion.relacion.nombre
+                    text: unaRelacion.relacion ? unaRelacion.relacion.nombre : '',
                 }], // The kind of relationship
                 name: {
                     resourceType: 'HumanName',
