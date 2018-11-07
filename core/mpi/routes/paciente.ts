@@ -456,6 +456,7 @@ router.put('/pacientes/mpi/:id', (req, res, next) => {
         if (patientFound) {
             const data = req.body;
             controller.updatePacienteMpi(patientFound, data, req).then((p) => {
+                EventCore.emitAsync('mpi:paciente:update', p);
                 res.json(p);
             }).catch(next);
 
@@ -471,6 +472,7 @@ router.put('/pacientes/mpi/:id', (req, res, next) => {
                 if (err2) {
                     return next(err2);
                 }
+                EventCore.emitAsync('mpi:paciente:create', newPatient);
                 const nuevoPac = JSON.parse(JSON.stringify(newPatient));
                 delete nuevoPac._id;
 
@@ -581,6 +583,7 @@ router.post('/pacientes', (req, res, next) => {
             } else {
                 req.body.activo = true;
                 return controller.createPaciente(req.body, req).then(pacienteObj => {
+                    EventCore.emitAsync('mpi:paciente:create', pacienteObj);
                     return res.json(pacienteObj);
                 }).catch((error) => {
                     return next(error);
@@ -590,6 +593,7 @@ router.post('/pacientes', (req, res, next) => {
     } else {
         req.body.activo = true;
         return controller.createPaciente(req.body, req).then(pacienteObjSinDocumento => {
+            EventCore.emitAsync('mpi:paciente:create', pacienteObjSinDocumento);
             return res.json(pacienteObjSinDocumento);
         }).catch((error2 => {
             return next(error2);
@@ -654,6 +658,7 @@ router.put('/pacientes/:id', (req, res, next) => {
                 delete data.fechaNacimiento;
             }
             controller.updatePaciente(patientFound, data, req).then((p) => {
+                EventCore.emitAsync('mpi:paciente:update', p);
                 res.json(p);
             }).catch(next);
 
@@ -673,6 +678,7 @@ router.put('/pacientes/:id', (req, res, next) => {
                         if (err2) {
                             return next(err2);
                         }
+                        EventCore.emitAsync('mpi:paciente:create', newPatient);
                         const nuevoPac = JSON.parse(JSON.stringify(newPatient));
                         // delete nuevoPac._id;
                         // delete nuevoPac.relaciones;
@@ -837,6 +843,7 @@ router.patch('/pacientes/:id', (req, res, next) => {
                 }
                 res.json(pacienteAndes);
                 EventCore.emitAsync('mpi:patient:update', pacienteAndes);
+                EventCore.emitAsync('mpi:paciente:update', pacienteAndes);
                 return;
             });
         }
@@ -866,6 +873,7 @@ router.patch('/pacientes/mpi/:id', (req, res, next) => {
                     if (errPatch) {
                         return next(errPatch);
                     }
+                    EventCore.emitAsync('mpi:paciente:create', pacienteMpi);
                     return res.json(pacienteMpi);
                 });
             } else {
