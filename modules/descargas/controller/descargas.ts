@@ -43,7 +43,6 @@ export class Documento {
                 }
                 resolve(prestacion);
             });
-
         });
     }
 
@@ -330,7 +329,6 @@ export class Documento {
 
                 // Prestación
                 let prestacion: any = await this.getPrestacionData(req.body.idPrestacion);
-
                 // Títulos default
                 let tituloFechaEjecucion = 'Fecha Ejecución';
 
@@ -383,7 +381,10 @@ export class Documento {
                         tipoPrestacion = prestacion.solicitud.tipoPrestacion.term[0].toUpperCase() + prestacion.solicitud.tipoPrestacion.term.slice(1);
                     }
 
-                    tipoPrestacion = tipoPrestacion[0].toUpperCase() + tipoPrestacion.slice(1);
+                    // let registros = '';
+                    let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+
+                    this.generarInforme(registros);
 
                     // Existe configuración de PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL?
                     if (config.informe && config.informe.motivoPrincipalDeConsultaOverride) {
