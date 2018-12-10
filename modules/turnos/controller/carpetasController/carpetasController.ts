@@ -16,6 +16,12 @@ const connection = {
     server: configPrivate.conSql.serverSql.server,
     database: configPrivate.conSql.serverSql.database
 };
+const connectionHeller = {
+    user: configPrivate.conSqlHeller.user,
+    password: configPrivate.conSqlHeller.password,
+    server: configPrivate.conSqlHeller.server,
+    database: configPrivate.conSqlHeller.database
+};
 const findUpdateCarpeta = async (paciente) => {
     const documentoPaciente = paciente['numeroDocumento'];
     const condicion = { documento: documentoPaciente };
@@ -79,7 +85,11 @@ export async function migrar() {
             logger('Efectores---->', efectores);
             // ejecutamos la migracion para cada efector en paralelo.
             for (const efector of efectores) {
-                await migrarEfector(efector);
+                if (efector.nombre === 'HOSPITAL DR. HORACIO HELLER') {
+                    await migrarCarpetasHeller(efector);
+                } else {
+                    await migrarEfector(efector);
+                }
             }
 
         } else {
@@ -88,6 +98,25 @@ export async function migrar() {
     } catch (err) {
         logger('Error al obtener la organización', err);
         LoggerJobs.log('actualizar carpetas', 'Error al obtener la organización: ' + err);
+    }
+
+    async function migrarCarpetasHeller(element: any) {
+        logger('Migrando carpetas de pacientes en:  ', element.nombre);
+        organizacion = element;
+        const consulta = `select nroreg as idPaciente,[Número de Documento] as numeroDocumento,,HC_HHH as historiaClinica from Pacientes`;
+        logger('EFECTOR', organizacion.nombre);
+        try {
+            const connectionPool = await sql.connect(connectionHeller);
+            sql.on('error', err => {
+                logger('Error SQL---->', err);
+            });
+            await utils.migrar(consulta, 'asd', 10000, findUpdateCarpeta, connectionPool);
+            sql.close();
+            logger('Migracion de datos completa desde ', organizacion.nombre);
+        } catch (err) {
+            logger('Error migrando en efector' + organizacion.nombre, err);
+            LoggerJobs.log('actualizar carpetas', 'Error migrando en efector' + organizacion.nombre + ': ' + err);
+        }
     }
 
     async function migrarEfector(element: any) {
@@ -119,7 +148,6 @@ export async function migrar() {
         } else {
             logger('ID sips inválido');
         }
-
     }
 
     async function getIdSips(efector) {
