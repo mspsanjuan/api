@@ -4,6 +4,7 @@ import * as mongoose from 'mongoose';
 
 export let pacienteFederadoSchema = new mongoose.Schema({
     id: mongoose.Schema.Types.ObjectId,
+    idPaciente: mongoose.Schema.Types.ObjectId,
     documento: String,
     respuesta: String,
     body: {

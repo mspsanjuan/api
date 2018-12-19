@@ -4,77 +4,87 @@ import { pacienteRechazadoTel } from '../schemas/pacienteRechazadoTel';
 const request = require('request');
 import * as Fhir from '../../../packages/fhir/src/patient';
 import { log } from '@andes/log';
+import * as mongoose from 'mongoose';
+
 
 export async function federadorjob(done) {
     try {
-        let cursor = await pacienteMpi.find().skip(976).limit(1000).cursor({ batchSize: 50 });
+        // .skip(976).limit(1000)
+        let cursor = await pacienteMpi.find().cursor({ batchSize: 100 });
         await cursor.eachAsync(async (pac: any) => {
-
-            if (pac.estado === 'validado') {
-                // Armar Json Fhir
-                let paciente_federador = Fhir.encode(pac);
-                let identificadores: any = [{
-                    system: 'urn:oid:2.16.840.1.113883.2.10.35',
-                    value: pac._id // cambiar por _id cuando se resulva
-                },
-                {
-                    system: 'http://www.renaper.gob.ar/dni',
-                    value: pac.documento
-                }];
-                paciente_federador['identifier'] = identificadores;
-                delete paciente_federador['active'];
-                let texto = pac.nombre + ' ' + pac.apellido;
-                texto = texto.trim();
-                let familia = pac.apellido;
-                familia = familia.trim();
-                let name: any = [
-                    {
-                        text: texto,
-                        family: familia,
-                        _family: {
-                            extension: [
-                                {
-                                    url: 'http://hl7.org/fhir/StructureDefinition/humanname-fathers-family',
-                                    valueString: familia
-                                },
-                            ]
-                        },
-                        given: [
-                            pac.nombre
-                        ]
-                    }
-                ];
-                paciente_federador['name'] = name;
-                paciente_federador['birthDate'] = new Date(paciente_federador['birthDate']).toISOString().slice(0, 10);
-                delete paciente_federador['deceasedDateTime'];
-                delete paciente_federador['maritalStatus'];
-                delete paciente_federador['photo'];
-                delete paciente_federador['address'];
-                delete paciente_federador['contact'];
-                let contactos = paciente_federador['telecom'] ? paciente_federador['telecom'] : [];
-                if (contactos.length > 0) {
-                    contactos.splice(1, contactos.length);
-                    if (contactos[0].value && contactos[0].value.length > 12) {
-                        const pacientesRechazadosTel = new pacienteRechazadoTel({
-                            id: pac._id,
-                            documento: pac.documento,
-                            contacto: pac.contacto
-
-                        });
-                        pacientesRechazadosTel.save();
-                    } else {
-                        await post_federador(paciente_federador, pac.documento, pac._id);
-
-                    }
-
-
-                    //  console.log(JSON.stringify(paciente_federador));
-
-
+            const query = pacienteFederado.find({ idPaciente: { $eq: mongoose.Types.ObjectId(pac._id) } });
+            query.exec(async (err, data) => {
+                if (data.length > 0) {
+                    console.log('Paciente ya agregado');
                 } else {
-                    await post_federador(paciente_federador, pac.documento, pac._id);
+
+                    if (pac.estado === 'validado') {
+                        // Armar Json Fhir
+                        let paciente_federador = Fhir.encode(pac);
+                        let identificadores: any = [{
+                            system: 'urn:oid:2.16.840.1.113883.2.10.35',
+                            value: pac._id // cambiar por _id cuando se resulva
+                        },
+                        {
+                            system: 'http://www.renaper.gob.ar/dni',
+                            value: pac.documento
+                        }];
+                        paciente_federador['identifier'] = identificadores;
+                        delete paciente_federador['active'];
+                        let texto = pac.nombre + ' ' + pac.apellido;
+                        texto = texto.trim();
+                        let familia = pac.apellido;
+                        familia = familia.trim();
+                        let name: any = [
+                            {
+                                text: texto,
+                                family: familia,
+                                _family: {
+                                    extension: [
+                                        {
+                                            url: 'http://hl7.org/fhir/StructureDefinition/humanname-fathers-family',
+                                            valueString: familia
+                                        },
+                                    ]
+                                },
+                                given: [
+                                    pac.nombre
+                                ]
+                            }
+                        ];
+                        paciente_federador['name'] = name;
+                        paciente_federador['birthDate'] = new Date(paciente_federador['birthDate']).toISOString().slice(0, 10);
+                        delete paciente_federador['deceasedDateTime'];
+                        delete paciente_federador['maritalStatus'];
+                        delete paciente_federador['photo'];
+                        delete paciente_federador['address'];
+                        delete paciente_federador['contact'];
+                        let contactos = paciente_federador['telecom'] ? paciente_federador['telecom'] : [];
+                        if (contactos.length > 0) {
+                            contactos.splice(1, contactos.length);
+                            if (contactos[0].value && contactos[0].value.length > 12) {
+                                const pacientesRechazadosTel = new pacienteRechazadoTel({
+                                    id: pac._id,
+                                    documento: pac.documento,
+                                    contacto: pac.contacto
+
+                                });
+                                pacientesRechazadosTel.save();
+                            } else {
+                                await post_federador(paciente_federador, pac.documento, pac._id);
+
+                            }
+
+
+                            //  console.log(JSON.stringify(paciente_federador));
+
+
+                        } else {
+                            await post_federador(paciente_federador, pac.documento, pac._id);
+                        }
+                    }
                 }
-            }
+            });
         }).catch(err => {
             // console.log('err1', err);
             done();
@@ -114,7 +124,6 @@ export function post_federador(data: any, identificador: String, id: String) {
             }
 
 
-
             if (error != null) {
                 console.log('error', error, 'id', id);
                 let fakeRequest = {
@@ -136,6 +145,7 @@ export function post_federador(data: any, identificador: String, id: String) {
             }
 
             const pac_federado = new pacienteFederado({
+                idPaciente: id,
                 documento: identificador,
                 respuesta,
                 body: bodyResponse
