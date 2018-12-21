@@ -34,7 +34,6 @@ export function darAsistencia(req, data, tid = null) {
     turno.updatedAt = new Date();
     turno.updatedBy = req.user.usuario || req.user;
     return turno;
-    // crearPrestacionVacia(turno, req);
 }
 
 // Turno
@@ -198,7 +197,6 @@ export function codificarTurno(req, data, tid) {
             }
             const arrPrestacion = data1 as any;
             const codificaciones = [];
-            // let promises = [];
             if (arrPrestacion.length > 0 && arrPrestacion[0].ejecucion) {
                 const prestaciones = arrPrestacion[0].ejecucion.registros.filter(f => {
                     return f.concepto.semanticTag !== 'elemento de registro';
@@ -235,6 +233,8 @@ export function codificarTurno(req, data, tid) {
                                                     nombre: (cie as any).nombre,
                                                     sinonimo: (cie as any).sinonimo,
                                                     c2: (cie as any).c2,
+                                                    reporteC2: (cie as any).reporteC2,
+                                                    ficha: (cie as any).ficha
                                                 }
                                             },
                                             primeraVez: registro.esPrimeraVez,
@@ -257,6 +257,8 @@ export function codificarTurno(req, data, tid) {
                                                     nombre: (cie as any).nombre,
                                                     sinonimo: (cie as any).sinonimo,
                                                     c2: (cie as any).c2,
+                                                    reporteC2: (cie as any).reporteC2,
+                                                    ficha: (cie as any).ficha
                                                 }
                                             },
                                             primeraVez: registro.esPrimeraVez
@@ -280,7 +282,6 @@ export function codificarTurno(req, data, tid) {
                                     });
                                 }
                                 if (prestaciones.length === codificaciones.length) {
-                                    // console.log('codificaciones ', codificaciones);
                                     turno.diagnostico = {
                                         ilegible: false,
                                         codificaciones: codificaciones.filter(cod => Object.keys(cod).length > 0)
@@ -777,31 +778,34 @@ export function actualizarEstadoAgendas() {
     const fechaActualizar = moment(new Date());
     // actualiza los agendas en estado pausada, disponible o publicada que se hayan ejecutado el día anterior
     const condicion = {
-        $or: [{ estado: 'disponible' }, { estado: 'publicada' }, { estado: 'pausada' }],
-        horaInicio: {
-            $lte: (moment(fechaActualizar).endOf('day').toDate() as any)
-        }
+        $or: [{ estado: 'disponible' }, { estado: 'publicada' }, { estado: 'pausada' }, { estado: 'pendienteAsistencia' }, { estado: 'pendienteAuditoria' }],
+        // $or: [{ estado: 'disponible' }, { estado: 'publicada' }, { estado: 'pausada' }],
+        $and: [
+            { horaInicio: { $gte: (moment(fechaActualizar).startOf('day').subtract(1, 'days').toDate() as any) } },
+            { horaInicio: { $lte: (moment(fechaActualizar).endOf('day').toDate() as any) } }
+        ]
     };
     const cursor = agendaModel.find(condicion).cursor();
     return cursor.eachAsync(doc => {
         const agenda: any = doc;
         let todosAsistencia = true;
+        let todosAuditados = true;
         for (let j = 0; j < agenda.bloques.length; j++) {
             const turnos = agenda.bloques[j].turnos;
             // Verifico si al hay al menos un turno asignado sin asistencia
-            if (turnos.filter((turno) => {
-                return (turno.estado === 'asignado' && !(turno.asistencia));
-            }).length > 0) {
-                todosAsistencia = false;
-            }
+            todosAsistencia = !turnos.some(t => t.estado === 'asignado' && !(t.asistencia));
+            todosAuditados = !(turnos.some(t => t.asistencia === 'asistio' && (!t.diagnostico.codificaciones[0] || (t.diagnostico.codificaciones[0] && !t.diagnostico.codificaciones[0].codificacionAuditoria))));
         }
 
         if (todosAsistencia) {
-            agenda.estado = 'pendienteAuditoria';
+            if (todosAuditados) {
+                agenda.estado = 'auditada';
+            } else {
+                agenda.estado = 'pendienteAuditoria';
+            }
         } else {
             agenda.estado = 'pendienteAsistencia';
         }
-
         Auth.audit(agenda, (userScheduler as any));
         return saveAgenda(agenda).then((nuevaAgenda) => {
             Logger.log(userScheduler, 'citas', 'actualizarEstadoAgendas', {
