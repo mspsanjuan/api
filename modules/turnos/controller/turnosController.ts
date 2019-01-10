@@ -2,6 +2,9 @@ import * as mongoose from 'mongoose';
 import * as agenda from '../../../modules/turnos/schemas/agenda';
 import { toArray } from '../../../utils/utils';
 import { logPaciente } from '../../../core/log/schemas/logPaciente';
+import * as controller from '../../../core/mpi/controller/paciente';
+import { paciente as pacienteModel } from '../../../core/mpi/schemas/paciente';
+import { Auth } from 'auth/auth.class';
 
 export function getTurno(req) {
     return new Promise(async (resolve, reject) => {
@@ -306,5 +309,49 @@ export async function getLiberadosPaciente(req) {
         }
     } else {
         return ('Datos insuficientes');
+    }
+}
+
+/**
+ *
+ *
+ * @export
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ * @param {*} pacienteMPI
+ * @returns
+ */
+export async function actualizarCarpeta(req: any, res: any, next: any, pacienteMPI: any, carpetas) {
+    let carpetasAux = (carpetas && carpetas.length > 0) ? (carpetas[0] as any).carpetaEfectores : [];
+    if (pacienteMPI) {
+        if (pacienteMPI.paciente.carpetaEfectores.length > 0) {
+            if (carpetasAux.length < pacienteMPI.paciente.carpetaEfectores.length) {
+                req.body.carpetaEfectores = pacienteMPI.paciente.carpetaEfectores;
+            } else {
+                if (carpetasAux) {
+                    req.body.carpetaEfectores = carpetasAux;
+                }
+            }
+        } else {
+            if (carpetas.length > 0) {
+                req.body.carpetaEfectores = carpetasAux;
+            }
+        }
+        const repetida = await controller.checkCarpeta(req, pacienteMPI.paciente);
+        if (!repetida) {
+            controller.updateCarpetaEfectores(req, pacienteMPI.paciente);
+            controller.updateTurnosPaciente(pacienteMPI.paciente);
+        } else {
+            return next('El nÚmero de carpeta ya existe');
+        }
+        let pacienteAndes: any;
+        if (pacienteMPI.db === 'mpi') {
+            pacienteAndes = new pacienteModel(pacienteMPI.paciente.toObject());
+        } else {
+            pacienteAndes = pacienteMPI.paciente;
+        }
+        Auth.audit(pacienteAndes, req);
+        await pacienteAndes.save();
     }
 }
