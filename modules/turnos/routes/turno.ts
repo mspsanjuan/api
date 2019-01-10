@@ -13,8 +13,7 @@ import * as turnosController from '../controller/turnosController';
 import * as moment from 'moment';
 import * as debug from 'debug';
 import { EventCore } from '@andes/event-bus';
-import * as carpetaPaciente from '../../carpetas/schemas/carpetaPaciente';
-import * as controller from '../../../core/mpi/controller/paciente';
+
 const router = express.Router();
 const dbgTurno = debug('dbgTurno');
 
@@ -47,10 +46,6 @@ function getTipoPrestacion(idTipoPrestacion) {
 }
 function getAgenda(idAgenda) {
     return agenda.findById(idAgenda).exec();
-}
-
-function getCarpeta(nroDocumento, idOrganizacion) {
-    return carpetaPaciente.find({ documento: nroDocumento, 'carpetaEfectores.organizacion._id': idOrganizacion }).exec();
 }
 
 router.patch('/turno/agenda/:idAgenda', async (req, res, next) => {
@@ -170,8 +165,8 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
             }
             // Si el paciente no tiene carpeta en ese efector, se busca en la colección carpetaPaciente y se actualiza
             if (!arrPrueba || arrPrueba.length === 0) {
-                const pacienteMPI = await controller.buscarPaciente(req.body.paciente.id) as any;
-                const carpetas = await getCarpeta(req.body.paciente.documento, (req as any).user.organizacion._id);
+                const pacienteMPI = await pacienteController.buscarPaciente(req.body.paciente.id) as any;
+                // const carpetas = await getCarpeta(req.body.paciente.documento, (req as any).user.organizacion._id);
                 await turnosController.actualizarCarpeta(req, res, next, pacienteMPI, carpetas);
                 pacienteTurno.carpetaEfectores = req.body.carpetaEfectores;
             }
