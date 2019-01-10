@@ -792,24 +792,25 @@ export async function validarPaciente(pacienteAndes) {
             pacienteAndes.cuil = pacienteRenaper.cuil;
             pacienteAndes.estado = 'validado';
             pacienteAndes.foto = pacienteRenaper.foto;
+            return { paciente: pacienteAndes, validado: true };
+        } else {
+            return await validarSisa(pacienteAndes, pacienteRenaper.foto);
         }
-        return { paciente: pacienteAndes, validado: true };
-    }
-    // Respuesta erronea de renaper o test regex fallido?
-    if (!resRenaper || (resRenaper && resRenaper.datos && resRenaper.datos.nroError !== 0) || band) {
+    } else {
         return await validarSisa(pacienteAndes);
+
     }
 }
 
-async function validarSisa(pacienteAndes: any) {
+async function validarSisa(pacienteAndes: any, foto = null) {
     try {
         let resSisa: any = await matchSisa(pacienteAndes);
-        let porcentajeMatcheo = resSisa.matcheos.matcheo;
-        if (porcentajeMatcheo > 95) {
-            pacienteAndes.nombre = resSisa.matcheos.datosPaciente.nombre;
-            pacienteAndes.apellido = resSisa.matcheos.datosPaciente.apellido;
-            pacienteAndes.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
-            pacienteAndes.estado = 'validado';
+        pacienteAndes.nombre = resSisa.matcheos.datosPaciente.nombre;
+        pacienteAndes.apellido = resSisa.matcheos.datosPaciente.apellido;
+        pacienteAndes.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
+        pacienteAndes.estado = 'validado';
+        if (foto) {
+            pacienteAndes.foto = foto;
         }
         return { paciente: pacienteAndes, validado: true };
     } catch (error) {
