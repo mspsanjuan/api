@@ -306,11 +306,6 @@ export default [
                 key: 'reglas',
                 title: 'Edición de Reglas',
                 type: 'boolean'
-            },
-            {
-                key: 'anular',
-                title: 'Anular Solicitudes',
-                type: 'boolean'
             }
         ]
     },

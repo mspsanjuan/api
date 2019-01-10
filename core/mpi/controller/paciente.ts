@@ -579,9 +579,8 @@ export async function actualizarFinanciador(req, next) {
     }
 }
 
-export async function checkCarpeta(req, data) {
-    if (req.body && req.body.carpetaEfectores) {
-
+export function checkCarpeta(req, data) {
+    return new Promise((resolve, reject) => {
         const indiceCarpeta = req.body.carpetaEfectores.findIndex(x => x.organizacion._id === req.user.organizacion.id);
         if (indiceCarpeta > -1) {
             const query = {
@@ -592,14 +591,16 @@ export async function checkCarpeta(req, data) {
                     }
                 }
             };
-            let unPaciente = await paciente.find(query).exec();
-            return (unPaciente && unPaciente.length > 0);
+            paciente.find(query, (err, res) => {
+                if (err) {
+                    reject(err);
+                }
+                resolve((res && res.length > 0));
+            });
         } else {
-            return null;
+            resolve(false);
         }
-    } else {
-        return null;
-    }
+    });
 }
 
 /* Hasta acá funciones del PATCH */

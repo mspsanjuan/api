@@ -149,28 +149,16 @@ router.patch('/turno/agenda/:idAgenda', async (req, res, next) => {
         motivoConsulta: String
     };
  */
-
 router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, res, next) => {
     // Al comenzar se chequea que el body contenga el paciente y el tipoPrestacion
     const continues = ValidateDarTurno.checkTurno(req.body);
-    const pacienteTurno = req.body.paciente;
-    if (continues.valid) {
-        let agendaRes = await getAgenda(req.body.idAgenda);
-        try {
-            let arrPrueba = [];
-            if (pacienteTurno.carpetaEfectores) {
-                arrPrueba = pacienteTurno.carpetaEfectores.find((elto) => {
-                    return elto.organizacion._id === (req as any).user.organizacion._id;
-                });
-            }
-            // Si el paciente no tiene carpeta en ese efector, se busca en la colección carpetaPaciente y se actualiza
-            if (!arrPrueba || arrPrueba.length === 0) {
-                const pacienteMPI = await pacienteController.buscarPaciente(req.body.paciente.id) as any;
-                // const carpetas = await getCarpeta(req.body.paciente.documento, (req as any).user.organizacion._id);
-                await turnosController.actualizarCarpeta(req, res, next, pacienteMPI, carpetas);
-                pacienteTurno.carpetaEfectores = req.body.carpetaEfectores;
-            }
 
+    if (continues.valid) {
+        let agendaRes;
+        try {
+            await getPaciente(req.body.paciente.id);
+            await getTipoPrestacion(req.body.tipoPrestacion._id);
+            agendaRes = await getAgenda(req.params.idAgenda);
         } catch (err) {
             return next(err);
         }
@@ -182,7 +170,7 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
 
         // Los siguientes 2 for ubican el indice del bloque y del turno
         for (let x = 0; x < (agendaRes as any).bloques.length; x++) {
-            if ((agendaRes as any).bloques[x]._id.equals(req.body.idBloque)) {
+            if ((agendaRes as any).bloques[x]._id.equals(req.params.idBloque)) {
                 posBloque = x;
 
                 // Ver si el día de la agenda coincide con el día de hoy
@@ -202,7 +190,7 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
                 };
 
                 for (let y = 0; y < (agendaRes as any).bloques[posBloque].turnos.length; y++) {
-                    if ((agendaRes as any).bloques[posBloque].turnos[y]._id.equals(req.body.idTurno)) {
+                    if ((agendaRes as any).bloques[posBloque].turnos[y]._id.equals(req.params.idTurno)) {
                         const turnoSeleccionado = (agendaRes as any).bloques[posBloque].turnos[y];
                         if (turnoSeleccionado.estado === 'disponible') {
                             posTurno = y;
@@ -290,7 +278,7 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
         // update[etiquetaPrimeraVez] = await esPrimerPaciente(agenda, req.body.paciente.id, ['primerPrestacion', 'primerProfesional']);
 
         const query = {
-            _id: req.body.idAgenda,
+            _id: req.params.idAgenda,
         };
 
         // Agrega un tag al JSON query
@@ -321,9 +309,9 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
                 pacienteController.actualizarFinanciador(req, next);
 
                 Logger.log(req, 'citas', 'asignarTurno', datosOp);
-                let turno = doc2.bloques.id(req.body.idBloque).turnos.id(req.body.idTurno);
+                let turno = doc2.bloques.id(req.params.idBloque).turnos.id(req.params.idTurno);
 
-                LoggerPaciente.logTurno(req, 'turnos:dar', req.body.paciente, turno, req.body.idBloque, req.body.idAgenda);
+                LoggerPaciente.logTurno(req, 'turnos:dar', req.body.paciente, turno, req.params.idBloque, req.params.idAgenda);
 
                 EventCore.emitAsync('citas:turno:asignar', turno);
                 EventCore.emitAsync('citas:agenda:update', doc2);
@@ -333,6 +321,7 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
                 operations.cacheTurnos(doc2);
                 // Fin de insert cache
                 res.json(agendaRes);
+
             }
 
 
