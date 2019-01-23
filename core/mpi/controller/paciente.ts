@@ -861,7 +861,6 @@ export async function validarPaciente(pacienteAndes, req: any = configPrivate.us
     } else {
         return await validarSisa(pacienteAndes, req);
     }
-    return { paciente: pacienteAndes, validado: false };
 }
 
 async function validarSisa(pacienteAndes: any, req: any, foto = null) {
