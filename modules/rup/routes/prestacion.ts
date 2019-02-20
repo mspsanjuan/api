@@ -6,22 +6,20 @@ import { model as Prestacion } from '../schemas/prestacion';
 import * as frecuentescrl from '../controllers/frecuentesProfesional';
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { buscarEnHuds, registrosProfundidad } from '../controllers/rup';
-import { Logger } from '../../../utils/logService';
 import { makeMongoQuery } from '../../../core/term/controller/grammar/parser';
 import { snomedModel } from '../../../core/term/schemas/snomed';
 import * as camasController from './../controllers/cama';
 import { EventCore } from '@andes/event-bus';
+import asyncLib = require('async');
+import { hudsCheckPaciente, hudsCheckPrestaciones } from '../../../core/huds/controllers/access-control';
 
 const router = express.Router();
-import async = require('async');
-
 
 /**
  * Trae todas las prestaciones con ambitoOrigen = internacion, tambien solo las prestaciones
  * internación y
  * que el paciente no tiene una cama asignada.
  */
-
 router.get('/prestaciones/sinCama', (req, res, next) => {
     let query = {
         'solicitud.organizacion.id': mongoose.Types.ObjectId(Auth.getOrganization(req)),
@@ -88,8 +86,11 @@ router.get('/prestaciones/sinCama', (req, res, next) => {
  * @param expresion: expresion snomed que incluye los conceptos que estamos buscando
  *
  */
-
 router.get('/prestaciones/huds/:idPaciente', async (req, res, next) => {
+    // Access Control & Log
+    if (!await hudsCheckPaciente(req, req.params.idPaciente)) {
+        return next(403);
+    }
 
     // verificamos que sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(req.params.idPaciente)) {
@@ -149,6 +150,10 @@ router.get('/prestaciones/huds/:idPaciente', async (req, res, next) => {
 
 
 router.get('/prestaciones/resumenPaciente/:idPaciente', async (req, res, next) => {
+    // // Access Control & Log
+    if (!await hudsCheckPaciente(req, req.params.idPaciente)) {
+        return next(403);
+    }
 
     // verificamos que sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(req.params.idPaciente)) {
@@ -348,15 +353,19 @@ router.get('/prestaciones/solicitudes', (req, res, next) => {
 });
 
 router.get('/prestaciones/:id*?', async (req, res, next) => {
-
     if (req.params.id) {
         const query = Prestacion.findById(req.params.id);
-        query.exec((err, data) => {
+        query.exec(async (err, data) => {
             if (err) {
                 return next(err);
             }
             if (!data) {
                 return next(404);
+            }
+
+            // Access Control & Log
+            if (!await hudsCheckPrestaciones(req, [data])) {
+                return next(403);
             }
             res.json(data);
         });
@@ -387,11 +396,16 @@ router.get('/prestaciones/:id*?', async (req, res, next) => {
             query.where('solicitud.profesional.id').equals(req.query.idProfesional);
         }
         if (req.query.idPaciente) {
-            let { paciente } = await buscarPaciente(req.query.idPaciente);
-            if (paciente) {
-                query.where('paciente.id').in(paciente.vinculos);
+            try {
+                let { paciente } = await buscarPaciente(req.query.idPaciente);
+                if (paciente) {
+                    query.where('paciente.id').in(paciente.vinculos);
+                }
+            } catch (err) {
+                // El paciente no fue encontrado
             }
         }
+
         if (req.query.idPrestacionOrigen) {
             query.where('solicitud.prestacionOrigen').equals(req.query.idPrestacionOrigen);
         }
@@ -414,7 +428,6 @@ router.get('/prestaciones/:id*?', async (req, res, next) => {
             query.where('solicitud.fecha').lte(moment(req.query.solicitudHasta).endOf('day').toDate() as any);
         }
 
-
         if (req.query.tienePrestacionOrigen !== undefined) {
             if (req.query.tienePrestacionOrigen === true) {
                 query.where('solicitud.prestacionOrigen').ne(null);
@@ -423,7 +436,6 @@ router.get('/prestaciones/:id*?', async (req, res, next) => {
                 query.where('solicitud.prestacionOrigen').equals(null);
             }
         }
-
 
         if (req.query.tieneTurno !== undefined) {
             if (req.query.tieneTurno === true) {
@@ -456,12 +468,14 @@ router.get('/prestaciones/:id*?', async (req, res, next) => {
             query.limit(parseInt(req.query.limit, 10));
         }
 
-        query.exec((err, data) => {
+        query.exec(async (err, data: any[]) => {
             if (err) {
                 return next(err);
             }
-            if (req.params.id && !data) {
-                return next(404);
+
+            // Access Control & Log
+            if (!await hudsCheckPrestaciones(req, data)) {
+                return next(403);
             }
             res.json(data);
         });
@@ -563,13 +577,14 @@ router.patch('/prestaciones/:id', (req, res, next) => {
                     frecuentes: req.body.registros
                 };
                 frecuentescrl.actualizarFrecuentes(dto).then(() => {
-                    Logger.log(req, 'rup', 'update', {
-                        accion: 'actualizarFrecuentes',
-                        ruta: req.url,
-                        method: req.method,
-                        data: req.body.listadoFrecuentes,
-                        err: false
-                    });
+                    // TODO: implementar con nuevo logger
+                    // Logger.log(req, 'rup', 'update', {
+                    //     accion: 'actualizarFrecuentes',
+                    //     ruta: req.url,
+                    //     method: req.method,
+                    //     data: req.body.listadoFrecuentes,
+                    //     err: false
+                    // });
                 }).catch((errFrec) => {
                     return next(errFrec);
                 });
@@ -582,7 +597,7 @@ router.patch('/prestaciones/:id', (req, res, next) => {
 
                 const solicitadas = [];
 
-                async.each(req.body.planes, (plan, callback) => {
+                asyncLib.each(req.body.planes, (plan, callback) => {
                     const nuevoPlan = new Prestacion(plan);
 
                     Auth.audit(nuevoPlan, req);
@@ -610,15 +625,6 @@ router.patch('/prestaciones/:id', (req, res, next) => {
             } else {
                 res.json(prestacion);
             }
-            /*
-            Logger.log(req, 'prestacionPaciente', 'update', {
-                accion: req.body.op,
-                ruta: req.url,
-                method: req.method,
-                data: data,
-                err: err || false
-            });
-            */
         });
     });
 });
