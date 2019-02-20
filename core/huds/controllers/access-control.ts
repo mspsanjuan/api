@@ -15,7 +15,10 @@ export async function hudsCheckPaciente(req: Express.Request, paciente: string):
     if (!paciente) {
         check = false;
     } else {
+        //////////////////////////////////////////////
+        // TODO: CONSULTAR BASE DE DATOS PARA VER SI TIENE ACCESO
         check = true;
+        //////////////////////////////////////////////
         try {
             if (check) {
                 await log(req, 'huds:access', paciente, (req as any).url, null);
