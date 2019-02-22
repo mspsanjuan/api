@@ -8,13 +8,13 @@ let router = express.Router();
 
 router.get('/', async (req, res, next) => {
     // Disable Auth for tests
-    // if (!Auth.check(req, 'log:get')) {
+    // if (!Auth.check(req, 'log:get')) { // huds:access
     //     return next(403);
     // }
     if (!req.query.key && !req.query.keyRegEx && !req.query.paciente) {
         return next(400);
     }
-
+    console.log('Entro api req.query', req.query);
     // Paginado
     let skip = parseInt(req.query.skip || 0, 10);
     let limit = Math.min(parseInt(req.query.limit || config.defaultLimit, 15), config.maxLimit);
