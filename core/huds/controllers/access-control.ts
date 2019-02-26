@@ -1,24 +1,40 @@
+import { profesional as profesionalModel } from './../../tm/schemas/profesional';
+import * as agendaModel from '../../../modules/turnos/schemas/agenda';
 import { log } from '@andes/log';
 import * as debugFactory from 'debug';
+import { paciente as pacienteModel } from '../../mpi/schemas/paciente';
 const debug = debugFactory('huds');
 
 /**
  * Controla si el usuario tiene acceso a la información del paciente
- *
+ * Tiene acceso cuando el propio paciente busca su información o
+ * cuando el usuario es un profesional que ha atendido al paciente
  * @export
  * @param {Express.Request} req Request
  * @param {string} paciente ID del paciente
  * @returns {Promise<boolean>} Indica si tiene acceso a los datos de la HUDS
  */
 export async function hudsCheckPaciente(req: Express.Request, paciente: string): Promise<boolean> {
-    let check;
-    if (!paciente) {
-        check = false;
-    } else {
-        //////////////////////////////////////////////
-        // TODO: CONSULTAR BASE DE DATOS PARA VER SI TIENE ACCESO
-        check = true;
-        //////////////////////////////////////////////
+    let check = false;
+    if (paciente) {
+        let pacienteBuscado = await pacienteModel.findById(paciente);
+        if (pacienteBuscado && (pacienteBuscado as any).documento === (req as any).user.usuario.documento) { // TODO: en algún momento la vinculación del usuario con el paciente o profesional se debe hacer de otra forma que con el documento
+            check = true;
+        } else {
+            let profesional = await profesionalModel.findOne({ documento: (req as any).user.usuario.documento }, { _id: 1 });
+            if (profesional) {
+                let agenda = await agendaModel.findOne({
+                    'profesionales._id': (profesional as any)._id,
+                    'bloques.turnos': {
+                        $elemMatch: {
+                            'paciente.id': paciente,
+                            asistencia: 'asistio'
+                        }
+                    }
+                });
+                check = agenda ? true : false;
+            }
+        }
         try {
             if (check) {
                 await log(req, 'huds:access', paciente, (req as any).url, null);
