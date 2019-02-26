@@ -125,7 +125,7 @@ export async function updatingMpi() {
                         await controller.updatePacienteMpi(pacMpi, pacienteAndes, userScheduler);
                     }
                 } catch (ex) {
-                    log(logRequest, logKeys.mpiUpdate.key, pacAndes, logKeys.mpiUpdate.operacion, ex, null);
+                    log(logRequest, logKeys.mpiUpdaterError.key, pacAndes, logKeys.mpiUpdaterError.operacion, ex);
                     return (ex);
                 }
             }

@@ -15,6 +15,7 @@ import * as https from 'https';
 import * as configPrivate from '../../../config.private';
 import { getServicioGeonode } from '../../../utils/servicioGeonode';
 import { handleHttpRequest } from '../../../utils/requestHandler';
+import { logKeys } from '../../../config';
 
 /**
  * Crea un paciente y lo sincroniza con elastic
@@ -142,6 +143,7 @@ export function updatePacienteMpi(pacMpi, pacAndes, req) {
                 EventCore.emitAsync('mpi:patient:update', pacMpi);
                 resolve(pacMpi);
             }).catch(error => {
+                log(req, logKeys.mpiUpdaterError.key, pacMpi, logKeys.mpiUpdaterError.operacion, error);
                 return reject(error);
             });
             resolve(pacMpi);
@@ -178,6 +180,7 @@ export function postPacienteMpi(newPatientMpi, req) {
                     EventCore.emitAsync('mpi:patient:create', newPatientMpi);
                     resolve(newPatientMpi);
                 }).catch((error) => {
+                    log(req, logKeys.mpiUpdaterError.key, newPatientMpi, logKeys.mpiUpdaterError.operacion, error);
                     reject(error);
                 });
             });

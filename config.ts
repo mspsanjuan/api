@@ -289,6 +289,10 @@ export const logKeys = {
         key: 'mpi:mpiUpdater:start',
         operacion: 'MPI updater start'
     },
+    mpiUpdaterError: {
+        key: 'mpi:mpiUpdater:error',
+        operacion: 'MPI updater error'
+    },
     mpiUpdaterFinish: {
         key: 'mpi:mpiUpdater:finish',
         operacion: 'MPI updater finish'
