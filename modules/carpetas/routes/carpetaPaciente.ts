@@ -1,5 +1,7 @@
 import * as express from 'express';
+import * as fs from 'fs';
 import * as carpetaPaciente from '../schemas/carpetaPaciente';
+import * as path from 'path';
 import * as carpetaPacienteController from '../controller/carpetaPacienteController';
 
 const router = express.Router();
@@ -57,10 +59,33 @@ const router = express.Router();
  *           $ref: '#/definitions/carpetaPaciente'
  */
 
-router.get('/carpetasPacientes/:id*?', async (req, res, next) => {
+// router.get('/carpetasPacientes/:id*?', async (req, res, next) => {
+//     try {
+//         const resultado = await carpetaPacienteController.buscarCarpeta(req);
+//         res.json(resultado);
+//     } catch (err) {
+//         return next(err);
+//     }
+// });
+
+router.get('/carpetasPacientes/actualizar', async (req, res, next) => {
+    let camino = path.join(__dirname, '../../../templates/rup/informes/html/pacientesHellerCSV0.csv');
+    let datosPacientes = fs.readFileSync(camino, 'utf8');
+    let ListaDatos = datosPacientes.split('\n').map(pac => {
+        if (pac !== '') {
+            let datos = pac.split(',');
+            return {
+                HC: datos[0],
+                documento: datos[1]
+            };
+        } else {
+            return undefined;
+        }
+    }).filter(pac => pac !== undefined);
+    console.log('ListaDatos', ListaDatos);
     try {
-        const resultado = await carpetaPacienteController.buscarCarpeta(req);
-        res.json(resultado);
+        await Promise.all(ListaDatos.map(c => carpetaPacienteController.actualizarCarpetaHHH(c)));
+        res.json(true);
     } catch (err) {
         return next(err);
     }
