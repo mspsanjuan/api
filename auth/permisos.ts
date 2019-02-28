@@ -163,7 +163,8 @@ export default [
         avoidAll: true,
         child: [
             { key: 'visualizacionHuds', title: 'Visualización HUDS por paciente', type: 'boolean' },
-            { key: 'access', title: 'Bitácora de Acceso', type: 'boolean', comment: 'Ingresar al registro de accesos a la HUDS del paciente' }
+            { key: 'log', title: 'Bitácora de accesos a la HUDS', type: 'boolean' }
+            // { key: 'superUsuario', title: 'Permiso para ver logs de todos los pacientes independientemente de otros permisos. Mantener comentado pero este permiso existe, se agrega por base de datos', type: 'boolean'} TODO: deberia ser un permiso global paraorganizacional
         ]
     },
     {
