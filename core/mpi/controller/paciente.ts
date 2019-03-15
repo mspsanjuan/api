@@ -3,6 +3,8 @@ import * as moment from 'moment';
 import { paciente, pacienteMpi } from '../schemas/paciente';
 import { ElasticSync } from '../../../utils/elasticSync';
 import { Logger } from '../../../utils/logService';
+import { log } from '@andes/log';
+import { logKeys } from '../../../config';
 import { Matching } from '@andes/match';
 import { Auth } from './../../../auth/auth.class';
 import { EventCore } from '@andes/event-bus';
@@ -38,12 +40,12 @@ export function createPaciente(data, req) {
             delete nuevoPac.direccion;
             const connElastic = new ElasticSync();
             connElastic.create(newPatient._id.toString(), nuevoPac).then(() => {
-                Logger.log(req, 'mpi', 'insert', newPatient);
+                log(req, logKeys.mpiInsert.key, null, logKeys.mpiInsert.operacion, newPatient, null);
                 // Código para emitir eventos
                 EventCore.emitAsync('mpi:patient:create', newPatient);
-                //
                 return resolve(newPatient);
             }).catch(error => {
+                log(req, logKeys.mpiInsertError.key, null, logKeys.mpiInsertError.operacion, error, null);
                 return reject(error);
             });
         });
@@ -66,17 +68,16 @@ export async function updatePaciente(pacienteObj, data, req) {
         await pacienteObj.save();
         const connElastic = new ElasticSync();
         let updated = await connElastic.sync(pacienteObj);
+
         if (updated) {
-            Logger.log(req, 'mpi', 'update', {
-                original: pacienteOriginal,
-                nuevo: pacienteObj
-            });
+            log(req, logKeys.mpiUpdate.key, pacienteObj._id, logKeys.mpiUpdate.operacion, pacienteObj, pacienteOriginal);
         } else {
-            Logger.log(req, 'mpi', 'insert', pacienteObj);
+            log(req, logKeys.mpiInsert.key, null, logKeys.mpiInsert.operacion, pacienteObj, null);
         }
         EventCore.emitAsync('mpi:patient:update', pacienteObj);
         return pacienteObj;
     } catch (error) {
+        log(req, logKeys.mpiUpdateError.key, null, logKeys.mpiUpdateError.operacion, error, null);
         return error;
     }
 
