@@ -20,15 +20,25 @@ import * as prepagasController from '../../obraSocial/controller/prepagas';
 const router = express.Router();
 const dbgTurno = debug('dbgTurno');
 
-router.get('/turno/:id*?', async (req, res, next) => {
+
+router.get('/turno/:id', async (req, res, next) => {
+    try {
+        const resultado = await turnosController.get(req.params.id);
+        res.json(resultado);
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get('/turno', async (req, res, next) => {
     try {
         const resultado = await turnosController.getTurno(req);
         res.json(resultado);
     } catch (err) {
         return next(err);
     }
-
 });
+
 router.get('/historial', async (req, res, next) => {
     try {
         const historial = turnosController.getHistorialPaciente(req);

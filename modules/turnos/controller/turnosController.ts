@@ -7,6 +7,41 @@ import * as controller from '../../../core/mpi/controller/paciente';
 import { Auth } from './../../../auth/auth.class';
 import { paciente as pacienteModel } from '../../../core/mpi/schemas/paciente';
 
+export async function get(id) {
+    const pipeline = [
+        {
+            $match: {
+                $or: [
+                    { 'bloques.turnos._id': mongoose.Types.ObjectId(id) },
+                    { 'sobreturnos._id': mongoose.Types.ObjectId(id) },
+                ]
+            }
+        },
+        { $addFields: { 'sobreturnos.tipoTurno': 'sobreturno' } },
+        { $addFields: { _sobreturnos: [{ turnos: '$sobreturnos' }] } },
+        { $addFields: { _bloques: { $concatArrays: ['$_sobreturnos', '$bloques'] } } },
+        { $unwind: '$_bloques' },
+        { $unwind: '$_bloques.turnos' },
+        {
+            $match: {
+                $or: [
+                    { 'bloques.turnos._id': mongoose.Types.ObjectId(id) },
+                    { 'sobreturnos._id': mongoose.Types.ObjectId(id) },
+                ]
+            }
+        },
+    ];
+    const data = await toArray(agenda.aggregate(pipeline).cursor({}).exec());
+    if (data.length > 0) {
+        return {
+            agenda_id: data[0]._id,
+            bloque_id: data[0]['_bloques']._id,
+            ...data[0]['_bloques'].turnos
+        };
+    }
+    return null;
+}
+
 export function getTurno(req) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -210,8 +245,7 @@ export async function getHistorialPaciente(req) {
 
             ];
 
-            let pipelineSobreturno = [];
-            pipelineSobreturno = [
+            const pipelineSobreturno = [
 
                 {
                     $match: {
