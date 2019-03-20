@@ -1,11 +1,13 @@
 import { paciente } from '../schemas/paciente';
 import moment = require('moment');
 import { userScheduler } from '../../../config.private';
-import { buscarPacienteWithcondition, createPaciente, updatePaciente, validarPaciente } from '../controller/paciente';
+import { buscarPacienteWithcondition, createPaciente, updatePaciente, validarPaciente, updateActivo } from '../controller/paciente';
 import { Types } from 'mongoose';
 import debug = require('debug');
 import { registroProvincialData } from '../../../config.private';
 import { handleHttpRequest } from '../../../utils/requestHandler';
+import { ElasticSync } from '../../../utils/elasticSync';
+import { EventCore } from '@andes/event-bus';
 
 const deb = debug('nacimientosJob');
 
@@ -37,9 +39,8 @@ async function getInfoNacimientos(fecha: string = null) {
     }
 }
 
-
 async function relacionar(mama, bebe) {
-    // Insertamos al bebé en ANDES
+    // Creamos la relación del lado del bebé
     bebe.relaciones = [{
         relacion: {
             _id: new Types.ObjectId('59247be21ebf0273353b23bf'),
@@ -50,15 +51,16 @@ async function relacionar(mama, bebe) {
         nombre: mama.nombre,
         apellido: mama.apellido,
         documento: mama.documento,
+        foto: (mama.foto) ? mama.foto : null
     }];
     try {
-        let bebeAndes: any = await createPaciente(bebe, userScheduler);
         if (mama.relaciones) {
-            let resultado = mama.relaciones.filter(elem => {
-                return elem.nombre.trim() === bebeAndes.nombre && elem.apellido.trim() === bebeAndes.apellido;
-            });
-            deb('RESULTADOO --->', resultado);
+            // Ya existe relación con el bebé?
+            let resultado = mama.relaciones.filter(rel => rel.nombre !== bebe.nombre && rel.apellido !== bebe.apellido);
+
             if (resultado.length === 0) {
+                // Si no existe, insertamos al bebé en ANDES y lo relacionamos
+                let bebeAndes: any = await createPaciente(bebe, userScheduler);
                 mama.relaciones.push({
                     relacion: {
                         _id: new Types.ObjectId('59247c391ebf0273353b23c0'),
@@ -69,9 +71,12 @@ async function relacionar(mama, bebe) {
                     nombre: bebeAndes.nombre,
                     apellido: bebeAndes.apellido,
                     documento: bebeAndes.documento,
+                    foto: (bebe.foto) ? bebe.foto : null
                 });
             }
         } else {
+            // Como no existen relaciones, insertamos al bebé en ANDES y lo vinculamos a la mama
+            let bebeAndes: any = await createPaciente(bebe, userScheduler);
             mama.relaciones = [{
                 relacion: {
                     _id: new Types.ObjectId('59247c391ebf0273353b23c0'),
@@ -82,22 +87,23 @@ async function relacionar(mama, bebe) {
                 nombre: bebeAndes.nombre,
                 apellido: bebeAndes.apellido,
                 documento: bebeAndes.documento,
+                foto: (bebe.foto) ? bebe.foto : null
             }];
         }
 
         let updateMama = {
             estado: mama.estado,
             foto: mama.foto ? mama.foto : '',
-            relaciones: mama.relaciones
+            relaciones: mama.relaciones,
+            activo: true
         };
 
-        // deb('UPDATE MAMA--->', updateMama);
         await updatePaciente(mama, updateMama, userScheduler);
     } catch (error) {
         return error;
     }
-
 }
+
 
 function parsearPacientes(importedData) {
     let parsedData = {
@@ -112,7 +118,8 @@ function parsearPacientes(importedData) {
             sexo: (importedData.ntiposexo === '1' ? 'masculino' : 'femenino'),
             genero: (importedData.ntiposexo === '1' ? 'masculino' : 'femenino'),
             contacto: [],
-            direccion: []
+            direccion: [],
+            activo: true
         },
         mama: {
             estado: 'temporal',
@@ -163,7 +170,13 @@ async function procesarDataNacimientos(nacimiento) {
     deb('PARSER RESULT--->', resultadoParse);
     try {
         let resultadoBusqueda: any = await buscarPacienteWithcondition({ documento: resultadoParse.mama.documento, sexo: 'femenino' });
-        // Existe en ANDES? Si existe no se hace nada.
+        // Existe en ANDES? Se intenta validación (En caso que fuera paciente temporal) y agrega una relacion con el nuevo bebe.
+        if (resultadoBusqueda.paciente.estado !== 'validado') {
+            let mamaValidada = await validarPaciente(resultadoBusqueda.paciente);
+            await relacionar(mamaValidada, resultadoParse.bebe);
+        } else {
+            await relacionar(resultadoBusqueda.paciente, resultadoParse.bebe);
+        }
         deb('Resultado Busqueda --> ', resultadoBusqueda.db);
     } catch (error) {
         // No existe en ANDES, la función buscarPacienteWithcondition hace un reject cuando no encuentra al paciente

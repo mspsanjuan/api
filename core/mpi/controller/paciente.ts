@@ -24,32 +24,29 @@ import { handleHttpRequest } from '../../../utils/requestHandler';
  * @param data Datos del paciente
  * @param req  request de express para poder auditar
  */
-export function createPaciente(data, req) {
-    return new Promise((resolve, reject) => {
-        const newPatient = new paciente(data);
-        if (req) {
-            Auth.audit(newPatient, req);
-        }
-        newPatient.save((err) => {
-            if (err) {
-                return reject(err);
-            }
-            const nuevoPac = JSON.parse(JSON.stringify(newPatient));
-            delete nuevoPac._id;
-            delete nuevoPac.relaciones;
-            delete nuevoPac.direccion;
-            const connElastic = new ElasticSync();
-            connElastic.create(newPatient._id.toString(), nuevoPac).then(() => {
-                log(req, logKeys.mpiInsert.key, null, logKeys.mpiInsert.operacion, newPatient, null);
-                // Código para emitir eventos
-                EventCore.emitAsync('mpi:patient:create', newPatient);
-                return resolve(newPatient);
-            }).catch(error => {
-                log(req, logKeys.mpiInsertError.key, null, logKeys.mpiInsertError.operacion, error, null);
-                return reject(error);
-            });
-        });
-    });
+export async function createPaciente(data, req) {
+    const newPatient = new paciente(data);
+    if (req) {
+        Auth.audit(newPatient, req);
+    }
+    try {
+        await newPatient.save();
+        const nuevoPac = JSON.parse(JSON.stringify(newPatient));
+        delete nuevoPac._id;
+        delete nuevoPac.relaciones;
+        delete nuevoPac.direccion;
+
+        const connElastic = new ElasticSync();
+        await connElastic.create(newPatient._id.toString(), nuevoPac);
+        log(req, logKeys.mpiInsert.key, newPatient._id, logKeys.mpiInsert.operacion, newPatient, null);
+
+        // Código para emitir eventos
+        EventCore.emitAsync('mpi:patient:create', newPatient);
+        return newPatient;
+    } catch (error) {
+        log(req, logKeys.mpiInsertError.key, null, logKeys.mpiInsertError.operacion, error, null);
+        return error;
+    }
 }
 
 
@@ -64,23 +61,20 @@ export async function updatePaciente(pacienteObj, data, req) {
         Auth.audit(pacienteObj, req);
     }
     try {
-        // await pacienteObj.save();
         await pacienteObj.save();
         const connElastic = new ElasticSync();
         let updated = await connElastic.sync(pacienteObj);
-
         if (updated) {
             log(req, logKeys.mpiUpdate.key, pacienteObj._id, logKeys.mpiUpdate.operacion, pacienteObj, pacienteOriginal);
         } else {
-            log(req, logKeys.mpiInsert.key, null, logKeys.mpiInsert.operacion, pacienteObj, null);
+            log(req, logKeys.mpiInsert.key, pacienteObj._id, logKeys.mpiInsert.operacion, pacienteObj, null);
         }
         EventCore.emitAsync('mpi:patient:update', pacienteObj);
         return pacienteObj;
     } catch (error) {
-        log(req, logKeys.mpiUpdateError.key, null, logKeys.mpiUpdateError.operacion, error, null);
+        log(req, logKeys.mpiUpdateError.key, pacienteObj._id, logKeys.mpiUpdateError.operacion, error, null);
         return error;
     }
-
 }
 /**
  * Busca los turnos futuros asignados al paciente y actualiza los datos.
@@ -824,6 +818,7 @@ export async function validarPaciente(pacienteAndes) {
             pacienteAndes.cuil = pacienteRenaper.cuil;
             pacienteAndes.estado = 'validado';
             pacienteAndes.foto = pacienteRenaper.foto;
+            pacienteAndes.activo = true;
         }
         return pacienteAndes;
     }
@@ -842,6 +837,7 @@ async function validarSisa(pacienteAndes: any) {
             pacienteAndes.apellido = resSisa.matcheos.datosPaciente.apellido;
             pacienteAndes.fechaNacimiento = resSisa.matcheos.datosPaciente.fechaNacimiento;
             pacienteAndes.estado = 'validado';
+            pacienteAndes.activo = true;
         }
         return pacienteAndes;
     } catch (error) {
