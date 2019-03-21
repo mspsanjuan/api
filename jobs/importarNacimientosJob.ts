@@ -7,10 +7,10 @@ const deb = debug('nacimientosJob');
 
 async function run(done) {
     // PARAMETRO FECHA OPCIONAL PARA TESTEAR , el formato debe ser 'yyyy-mm-dd'
-    let fecha = '2018/10/04';
-    await importarNacimientos(fecha); // <-- parametro opcional va aquí
+    // let fecha = '2018/10/13';
+    await importarNacimientos(); // <-- parametro opcional fecha va aquí
     await agregarDocumentosFaltantes();
-    await obtenerModificaciones(fecha);
+    await obtenerModificaciones(); // <-- parametro opcional fecha va aquí
 
     deb('Proceso Finalizado');
     done();

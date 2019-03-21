@@ -26,17 +26,11 @@ export class ElasticSync {
         let body = await this.search({
             q: '_id:' + id
         });
-        try {
-            const hits = body.hits.hits;
-            if (hits.length > 0) {
-                return this.update(id, data);
-            } else {
-                return this.create(id, data);
-            }
-        } catch (error) {
-            // tslint:disable-next-line:no-console
-            console.error(error);
-            return false;
+        const hits = body.hits.hits;
+        if (hits.length > 0) {
+            return this.update(id, data);
+        } else {
+            return this.create(id, data);
         }
     }
 
@@ -51,13 +45,7 @@ export class ElasticSync {
                 body: query
             };
         }
-        try {
-            return await this.connElastic.search(searchObj);
-        } catch (error) {
-            // tslint:disable-next-line:no-console
-            console.error(error);
-            return false;
-        }
+        return await this.connElastic.search(searchObj);
     }
 
     public searchMultipleFields(query) {
@@ -92,45 +80,26 @@ export class ElasticSync {
     }
 
     public async create(id, data) {
-        try {
-            return await this.connElastic.create({
-                index: this.INDEX,
-                type: this.TYPE,
-                id,
-                body: data,
-                refresh: true
-            });
-        } catch (error) {
-            // tslint:disable-next-line:no-console
-            console.error(error);
-            return false;
-        }
+        return await this.connElastic.create({
+            index: this.INDEX,
+            type: this.TYPE,
+            id,
+            body: data,
+            refresh: true
+        });
     }
 
     public async update(id, data) {
-        try {
-            await this.delete(id);
-            return await this.create(id, data);
-        } catch (error) {
-            // tslint:disable-next-line:no-console
-            console.error(error);
-            return false;
-        }
+        await this.delete(id);
+        return await this.create(id, data);
     }
 
-    public delete(id) {
-        return new Promise((resolve, reject) => {
-            this.connElastic.delete({
-                index: this.INDEX,
-                type: this.TYPE,
-                refresh: true,
-                id
-            }, (error, response) => {
-                if (error) {
-                    reject(error);
-                }
-                resolve(true);
-            });
+    public async delete(id) {
+        return await this.connElastic.delete({
+            index: this.INDEX,
+            type: this.TYPE,
+            refresh: true,
+            id
         });
     }
 

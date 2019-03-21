@@ -1,13 +1,12 @@
 import { paciente } from '../schemas/paciente';
 import moment = require('moment');
 import { userScheduler } from '../../../config.private';
-import { buscarPacienteWithcondition, createPaciente, updatePaciente, validarPaciente, updateActivo } from '../controller/paciente';
+import { buscarPacienteWithcondition, createPaciente, updatePaciente, validarPaciente } from '../controller/paciente';
 import { Types } from 'mongoose';
 import debug = require('debug');
 import { registroProvincialData } from '../../../config.private';
 import { handleHttpRequest } from '../../../utils/requestHandler';
-import { ElasticSync } from '../../../utils/elasticSync';
-import { EventCore } from '@andes/event-bus';
+import { modelParentesco } from '../schemas/parentesco';
 
 const deb = debug('nacimientosJob');
 
@@ -40,20 +39,20 @@ async function getInfoNacimientos(fecha: string = null) {
 }
 
 async function relacionar(mama, bebe) {
-    // Creamos la relación del lado del bebé
-    bebe.relaciones = [{
-        relacion: {
-            _id: new Types.ObjectId('59247be21ebf0273353b23bf'),
-            nombre: 'progenitor/a',
-            opuesto: 'hijo/a'
-        },
-        referencia: mama._id,
-        nombre: mama.nombre,
-        apellido: mama.apellido,
-        documento: mama.documento,
-        foto: (mama.foto) ? mama.foto : null
-    }];
     try {
+        // Creamos la relación del lado del bebé
+        let parentescoMama: any = await modelParentesco.find({ nombre: 'progenitor/a' });
+        let parentescoBebe: any = await modelParentesco.find({ nombre: 'hijo/a' });
+
+        bebe.relaciones = [{
+            relacion: parentescoMama[0],
+            referencia: mama._id,
+            nombre: mama.nombre,
+            apellido: mama.apellido,
+            documento: mama.documento,
+            foto: (mama.foto) ? mama.foto : null
+        }];
+
         if (mama.relaciones) {
             // Ya existe relación con el bebé?
             let resultado = mama.relaciones.filter(rel => rel.nombre !== bebe.nombre && rel.apellido !== bebe.apellido);
@@ -62,11 +61,7 @@ async function relacionar(mama, bebe) {
                 // Si no existe, insertamos al bebé en ANDES y lo relacionamos
                 let bebeAndes: any = await createPaciente(bebe, userScheduler);
                 mama.relaciones.push({
-                    relacion: {
-                        _id: new Types.ObjectId('59247c391ebf0273353b23c0'),
-                        nombre: 'hijo/a',
-                        opuesto: 'progenitor/a'
-                    },
+                    relacion: parentescoBebe[0],
                     referencia: bebeAndes._id,
                     nombre: bebeAndes.nombre,
                     apellido: bebeAndes.apellido,
@@ -78,11 +73,7 @@ async function relacionar(mama, bebe) {
             // Como no existen relaciones, insertamos al bebé en ANDES y lo vinculamos a la mama
             let bebeAndes: any = await createPaciente(bebe, userScheduler);
             mama.relaciones = [{
-                relacion: {
-                    _id: new Types.ObjectId('59247c391ebf0273353b23c0'),
-                    nombre: 'hijo/a',
-                    opuesto: 'progenitor/a'
-                },
+                relacion: parentescoBebe[0],
                 referencia: bebeAndes._id,
                 nombre: bebeAndes.nombre,
                 apellido: bebeAndes.apellido,
