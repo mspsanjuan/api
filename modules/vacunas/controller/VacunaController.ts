@@ -9,8 +9,9 @@ const weights = {
 };
 
 export function getVacunas(paciente) {
-    const conditions = {};
-    conditions['documento'] = paciente.documento;
+    const conditions = {
+        documento: paciente.documento
+    };
     const sort = { fechaAplicacion: -1 };
 
     return new Promise((resolve, reject) => {

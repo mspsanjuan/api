@@ -52,14 +52,14 @@ export function encode(organization) {
             return cont;
         }) : [];
         // Parsea direcciones
-        let direcciones = data.direccion ? {
+        let direcciones = data.direccion ? [{
             resourceType: 'Address',
             postalCode: data.direccion.codigoPostal ? data.direccion.codigoPostal : '',
             line: [data.direccion.valor],
             city: data.direccion.ubicacion.localidad ? data.direccion.ubicacion.localidad.nombre : '',
             state: data.direccion.ubicacion.provincia ? data.direccion.ubicacion.provincia.nombre : '',
             country: data.direccion.ubicacion.pais ? data.direccion.ubicacion.pais.nombre : '',
-        } : [];
+        }] : [];
 
         // Armamos la organizacion FHIR
         let organizacionFHIR = {

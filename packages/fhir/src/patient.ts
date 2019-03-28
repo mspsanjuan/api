@@ -5,23 +5,26 @@
  */
 export function encode(patient) {
     let data = patient;
-    if (data) {
-        let identificadores = data.documento ? [{
-            assigner: 'DU',
-            value: data.documento
-        }] : [];
-        if (data.cuil) {
+    if (patient) {
+        const identificadores = [];
+        if (patient.documento) {
             identificadores.push({
-                assigner: 'CUIL',
-                value: data.cuil
+                system: 'http://www.renaper.gob.ar/dni',
+                value: patient.documento
+            });
+        }
+        if (patient.cuil) {
+            identificadores.push({
+                system: 'http://www.renaper.gob.ar/cuil',
+                value: patient.cuil
             });
         }
         identificadores.push({
-            assigner: 'andes',
-            value: data._id
+            system: 'http://app.andes.gob.ar/Patient',
+            value: patient._id
         });
         // Parsea contactos
-        let contactos = data.contacto ? data.contacto.map(unContacto => {
+        let contactos = patient.contacto ? patient.contacto.map(unContacto => {
             let cont = {
                 resourceType: 'ContactPoint',
                 value: unContacto.valor,
@@ -41,7 +44,7 @@ export function encode(patient) {
             return cont;
         }) : [];
         // Parsea direcciones
-        let direcciones = data.direccion ? data.direccion.map(unaDireccion => {
+        let direcciones = patient.direccion ? patient.direccion.map(unaDireccion => {
             let direc = {
                 resourceType: 'Address',
                 postalCode: unaDireccion.codigoPostal ? unaDireccion.codigoPostal : '',
@@ -53,7 +56,7 @@ export function encode(patient) {
             return direc;
         }) : [];
         // Parsea relaciones
-        let relaciones = data.relaciones ? data.relaciones.map(unaRelacion => {
+        let relaciones = patient.relaciones ? patient.relaciones.map(unaRelacion => {
             let relacion = {
                 relationship: [{
                     text: unaRelacion.relacion.nombre
@@ -67,7 +70,7 @@ export function encode(patient) {
             return relacion;
         }) : [];
         let genero;
-        switch (data.genero) {
+        switch (patient.genero) {
             case 'femenino':
                 genero = 'female';
                 break;
@@ -81,19 +84,21 @@ export function encode(patient) {
         let pacienteFHIR = {
             resourceType: 'Patient',
             identifier: identificadores,
-            active: data.activo ? data.activo : null, // Whether this patient's record is in active use
+            active: patient.activo ? patient.activo : null, // Whether this patient's record is in active use
             name: [{
                 resourceType: 'HumanName',
-                family: data.apellido, // Family name (often called 'Surname')
-                given: data.nombre, // Given names (not always 'first'). Includes middle names
+                family: patient.apellido,
+                given: patient.nombre,
+                text: `${patient.nombre} ${patient.apellido}`
+                // [TODO] Confirmar si va el _family
             }],
             gender: genero, // male | female | other | unknown
-            birthDate: data.fechaNacimiento,
-            deceasedDateTime: data.fechaFallecimiento ? data.fechaFallecimiento : null,
+            birthDate: patient.fechaNacimiento,
+            deceasedDateTime: patient.fechaFallecimiento ? patient.fechaFallecimiento : null,
         };
-        if (data.estadoCivil) {
+        if (patient.estadoCivil) {
             let estadoCivil;
-            switch (data.estadoCivil) {
+            switch (patient.estadoCivil) {
                 case 'casado':
                     estadoCivil = 'Married';
                     break;
@@ -114,9 +119,9 @@ export function encode(patient) {
                 text: estadoCivil
             };
         }
-        if (data.foto) { // Image of the patient
+        if (patient.foto) { // Image of the patient
             pacienteFHIR['photo'] = [{
-                data: data.foto
+                patient: patient.foto
             }];
         }
         if (contactos.length > 0) { // A contact detail for the individual
@@ -156,9 +161,15 @@ export function decode(patient) {
             sexo = 'otro';
             break;
     }
-
+    function getValue(items, key) {
+        const element = items.find(el => el.system === key);
+        if (element) {
+            return element.value;
+        }
+    }
     let pacienteAndes = {
-        documento: patient.identifier[0].value, // suponemos que como identificador en la primer posición nos envían el dni (Consensuar)
+        id: getValue(patient.identifier, 'http://app.andes.gob.ar/Patient'),
+        documento: getValue(patient.identifier, 'http://www.renaper.gob.ar/dni'),
         nombre: patient.name[0].given.join().replace(',', ' '),
         apellido: patient.name[0].family.join().replace(',', ' '),
         fechaNacimiento: patient.birthDate,

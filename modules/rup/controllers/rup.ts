@@ -1,5 +1,6 @@
 import * as mongoose from 'mongoose';
-
+import moment = require('moment');
+import { model as Prestacion } from '../schemas/prestacion';
 /**
  * Función recursiva que permite recorrer un objeto y todas sus propiedades
  * y al llegar a un nodo hoja ejecutar una funcion
@@ -111,6 +112,35 @@ export function registrosProfundidad(registro, conceptos) {
     return data;
 }
 
+
+export async function getPrestaciones(paciente, { estado = 'validada', desde = null, hasta = null }) {
+    const query = {
+        'paciente.id': paciente._id,
+        $where: `this.estados[this.estados.length - 1].tipo ==  "${estado}"`
+    };
+    if (desde || hasta) {
+        query['ejecucion.fecha'] = {};
+        if (desde) {
+            query['ejecucion.fecha']['$gte'] = moment(desde).startOf('day').toDate();
+        }
+        if (hasta) {
+            query['ejecucion.fecha']['$lte'] = moment(hasta).endOf('day').toDate();
+        }
+    }
+
+    return await Prestacion.find(query);
+}
+
+export function filtrarRegistros(prestaciones: any[], { semanticTags }) {
+    let registros = [];
+    prestaciones.forEach(prestacion => {
+        const regis = prestacion.ejecucion.registros.filter(registro => {
+            const semTag = registro.concepto.semanticTag;
+            return semanticTags.find(el => el === semTag);
+        });
+        registros = [...registros, ... regis];
+    });
+}
 
 export function buscarEnHuds(prestaciones, conceptos) {
     let data = [];
