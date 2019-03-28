@@ -134,24 +134,30 @@ export async function getProtocolos(params) {
     conditions.push({ $group: group });
     conditions.push({ $project: project });
 
-    let data = await Prestacion.aggregate(conditions).allowDiskUse(true).exec();
-    if (params.organizacionDerivacion) {
-        data.forEach((d) => {
-            d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
-                return !r.valor.estados.some(e => e.tipo === 'derivada');
+    let prestaciones = await Prestacion.aggregate(conditions).allowDiskUse(true).exec();
+
+    if (params.organizacionDerivacion || params.practicasValidadas) {
+        if (params.organizacionDerivacion) {
+            prestaciones.forEach((d) => {
+                d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
+                    return !r.valor.estados.some(e => e.tipo === 'derivada');
+                });
             });
-        });
+        }
+
+        if (params.practicasValidadas) {
+            prestaciones.forEach((d) => {
+                d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
+                    return r.valor.estados.some(e => e.tipo === 'validada');
+                });
+            });
+        }
+
+        prestaciones = prestaciones.filter((p) => p.ejecucion.registros.length > 0 );
     }
 
-    if (params.practicasValidadas) {
-        data.forEach((d) => {
-            d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
-                return r.valor.estados.some(e => e.tipo !== 'validada');
-            });
-        });
-    }
-    cargarValoresDeReferencia(data);
-    return data;
+    cargarValoresDeReferencia(prestaciones);
+    return prestaciones;
 }
 
 /**

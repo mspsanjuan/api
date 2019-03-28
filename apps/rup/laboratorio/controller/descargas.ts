@@ -1,15 +1,16 @@
+import { model } from './../../../../core/term/schemas/cie10';
 import { endReporteHTML } from './../templates/endReporte';
 import { pageBreakHTML } from './../templates/pageBreak';
 import { startReporteHTML } from './../templates/startReporte';
 import { resultadoPracticaHTML } from './../templates/resultadosPractica';
 import { headerHTML } from './../templates/header';
-import * as fs from 'fs';
 import * as pdf from 'html-pdf';
 import * as moment from 'moment';
 import { env } from 'process';
-import * as path from 'path';
 import { calcularEdad } from './../../../../utils/utils';
 import { datosProtocoloHTML } from '../templates/datosProtocolo';
+import { getDatosFormacion } from '../../../../core/tm/controller/profesional';
+import { Types } from 'mongoose';
 
 moment.locale('es');
 
@@ -24,16 +25,26 @@ export class Documento {
 
     private static options: pdf.CreateOptions = {};
 
+    /**
+     *
+     *
+     * @static
+     * @param {*} req
+     * @param {*} res
+     * @param {*} next
+     * @param {*} [options=null]
+     * @returns
+     * @memberof Documento
+     */
     public static descargarReportesResultados(req, res, next, options = null) {
-        return new Promise((resolve, reject) => {
+        return new Promise( async (resolve, reject) => {
 
             // PhantomJS PDF rendering options
             // https://www.npmjs.com/package/html-pdf
             // http://phantomjs.org/api/webpage/property/paper-size.html
-            let phantomPDFOptions: pdf.CreateOptions = {
+            this.options = pdf.CreateOptions = {
                 format: 'A4',
                 border: {
-                    // default is 0, units: mm, cm, in, px
                     top: '0.5cm',
                     right: '1cm',
                     bottom: '1cm',
@@ -49,11 +60,7 @@ export class Documento {
                 }
             };
 
-            // this.options = options || phantomPDFOptions;
-            this.options = phantomPDFOptions;
-
-
-            pdf.create(this.generarReporteResultados(req.body), this.options).toFile((err, file): any => {
+            pdf.create(await this.generarReporteResultados(req.body), this.options).toFile((err, file): any => {
                 if (err) {
                     reject(err);
                 }
@@ -63,21 +70,17 @@ export class Documento {
     }
 
 
-    private static generarReporteResultados(protocolos) {
-        // const htmlStartReporte = fs.readFileSync(path.join(__dirname, '../templates/startReporte.html'), 'utf8');
-        // const htmlHeader = fs.readFileSync(path.join(__dirname, '../templates/header.html'), 'utf8');
-        // const htmlDatosProtocolo = fs.readFileSync(path.join(__dirname, '../templates/datosProtocolo.html'), 'utf8');
-        // const htmlResultadosPractica = fs.readFileSync(path.join(__dirname, '../templates/resultadosPractica.html'), 'utf8');
-        // const htmlEndReporte = fs.readFileSync(path.join(__dirname, '../templates/endReporte.html'), 'utf8');
-        // const htmlPageBreak = fs.readFileSync(path.join(__dirname, '../templates/pageBreak.html'), 'utf8');
-
-        // const htmlStartReporte = fs.readFileSync(path.join(__dirname, '../templates/startReporte.html'), 'utf8');
-        // const htmlHeader = fs.readFileSync(path.join(__dirname, '../templates/header.html'), 'utf8');
-        // const htmlDatosProtocolo = fs.readFileSync(path.join(__dirname, '../templates/datosProtocolo.html'), 'utf8');
-        // const htmlResultadosPractica = fs.readFileSync(path.join(__dirname, '../templates/resultadosPractica.html'), 'utf8');
-        // const htmlEndReporte = fs.readFileSync(path.join(__dirname, '../templates/endReporte.html'), 'utf8');
-        // const htmlPageBreak = fs.readFileSync(path.join(__dirname, '../templates/pageBreak.html'), 'utf8');
-
+    /**
+     *
+     *
+     * @private
+     * @static
+     * @param {*} protocolos
+     * @returns
+     * @memberof Documento
+     */
+    private static async generarReporteResultados(protocolos) {
+        await cargarDatosProfesionales(protocolos);
         let getHtmlHeader = (organizacionNombre) => {
             return headerHTML.replace('<!-- protocolos[0].solicitud.organizacion.nombre -->', organizacionNombre);
         };
@@ -120,8 +123,12 @@ export class Documento {
             }
 
             html = html.replace('<!-- registro.valor.resultado.firmaElectronica -->',
-                registro.valor.estados[registro.valor.estados.length - 1].usuario.nombreCompleto + ' - ' +
-                registro.valor.estados[registro.valor.estados.length - 1].usuario.documento);
+                registro.valor.estados[registro.valor.estados.length - 1].usuario.formacionGrado.profesion.nombre + ' ' +
+                registro.valor.estados[registro.valor.estados.length - 1].usuario.nombreCompleto + ' - MP: ' +
+                registro.valor.estados[registro.valor.estados.length - 1]
+                                                        .usuario.formacionGrado.matriculacion[  registro.valor.estados[registro.valor.estados.length - 1].usuario.formacionGrado.matriculacion.length - 1
+                                                    ].matriculaNumero);
+
             return html;
         };
 
@@ -142,4 +149,35 @@ export class Documento {
         htmlReporte += endReporteHTML;
         return htmlReporte;
     }
+}
+
+/**
+ *
+ *
+ * @param {*} protocolos
+ */
+async function cargarDatosProfesionales(protocolos) {
+    const codigosProfesiones = [8];
+    let estado;
+    let documentos: any[]  = [];
+    let documento;
+    let res;
+
+    protocolos.forEach(p => {
+        p.ejecucion.registros.forEach( r => {
+            documento = r.valor.estados[r.valor.estados.length - 1].usuario.id;
+            if(documentos.indexOf(documento) < 0) {
+                documentos.push(documento);
+            }
+        });
+    });
+
+    const datosFormacion: any = await getDatosFormacion(documentos, codigosProfesiones);
+    protocolos.forEach(p => {
+        p.ejecucion.registros.forEach( r => {
+            estado = r.valor.estados[r.valor.estados.length - 1];
+            res = datosFormacion.find( d => d._id.toString() === estado.usuario.id);
+            estado.usuario.formacionGrado = res ? res.datosProfesion.formacionGrado : null;
+        });
+    });
 }
