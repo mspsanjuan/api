@@ -1,7 +1,7 @@
 import { model as Prestacion } from '../schemas/prestacion';
 import { toArray } from '../../../utils/utils';
 import * as mongoose from 'mongoose';
-import { getConcepts } from '../../../core/term/controller/snomedCtr';
+import { getConcepts, populateSnomedTree } from '../../../core/term/controller/snomedCtr';
 import { paciente as Paciente, pacienteMpi as PacienteMpi } from '../../../core/mpi/schemas/paciente';
 
 const ObjectId = mongoose.Types.ObjectId;
@@ -212,7 +212,15 @@ export async function dashboard(org, prestaciones, desde, hasta) {
 
     // Obtengo el listado de concepto y busco su metadata
     const concepts = registros.map(e => e.concepto.conceptId);
-    const conceptos = await getConcepts(concepts);
-
+    const conceptos = await populateSnomedTree(concepts);
+    const SNOMEDCT = {
+        fsn: 'concepto de SNOMED CT (SNOMED RT+CTV3)',
+        term: 'concepto de SNOMED CT (SNOMED RT+CTV3)',
+        conceptId: '138875005',
+        statedAncestors: [],
+        relationships: [],
+        semanticTag: 'SNOMED RT+CTV3'
+    };
+    conceptos.push(SNOMEDCT);
     return { pacientes, registros, metadata: conceptos };
 }

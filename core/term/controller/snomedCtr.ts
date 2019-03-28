@@ -172,6 +172,19 @@ export async function getConceptByExpression(expression) {
     });
 }
 
+export async function populateSnomedTree(conceptsIds) {
+    const fullSearchConcept = {};
+    const concepts = await SnomedModel.find({ conceptId: { $in: conceptsIds} }, { statedAncestors: 1, conceptId: 1 });
+    concepts.forEach((cs: any) => {
+        cs.statedAncestors.forEach(ctId => {
+            fullSearchConcept[ctId] = true;
+        });
+    });
+    const ctids = Object.keys(fullSearchConcept);
+    return getConcepts(ctids);
+
+}
+
 export async function getConcepts(conceptsIds) {
     return SnomedModel.aggregate([
         { $match:  { conceptId: { $in :  conceptsIds } } },
@@ -190,7 +203,7 @@ export async function getConcepts(conceptsIds) {
                 semtag: 1,
                 relationships: {
                     fsn: '$relationships.destination.fullySpecifiedName',
-                    term: '$relationships.destination.fullySpecifiedName',
+                    term: '$relationships.destination.preferredTerm',
                     conceptId: '$relationships.destination.conceptId'
                 }
             }
