@@ -103,8 +103,7 @@ export async function findByDescripcion(paramBusqueda, soloSimples, noNomenclada
             { nombre: { $regex: paramBusqueda } },
             { 'concepto.term': { $regex: paramBusqueda } }
         ],
-        $and: [ ]
-        //$and: [{ codigoNomenclador: { $ne: '' } }]
+        $and: []
     };
 
     if (!noNomencladas) {

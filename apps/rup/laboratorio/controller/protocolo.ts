@@ -148,7 +148,8 @@ export async function getProtocolos(params) {
         if (params.practicasValidadas) {
             prestaciones.forEach((d) => {
                 d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
-                    return r.valor.estados.some(e => e.tipo === 'validada');
+                    return r.valor.resultado.valor && r.valor.resultado.valor !== ''
+                        && r.valor.estados.some(e => e.tipo === 'validada');
                 });
             });
         }
@@ -176,7 +177,7 @@ function cargarValoresDeReferencia(data) {
     data.forEach((prestacion) => {
         prestacion.ejecucion.registros.forEach((registro) => {
 
-            if (registro.valor.practica.resultado.valorDefault && !registro.valor.resultado.valor) {
+            if (registro.valor.practica.resultado.valorDefault && registro.valor.practica.resultado.valorDefault > 0 && !registro.valor.resultado.valor) {
                 registro.valor.resultado.valor = registro.valor.practica.resultado.valorDefault;
             }
 
