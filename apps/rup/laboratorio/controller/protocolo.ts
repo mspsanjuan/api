@@ -94,7 +94,7 @@ export async function getProtocolos(params) {
             $addFields: {
                 practicasFiltradas: {
                     $filter: {
-                        input: '$practicas', as: 'p', cond: { $in: ['$$p.area._id', areas] }
+                        input: '$practicas', as: 'p', cond: { $in: ['$$p.area.id', areas] }
                     }
                 }
             }
@@ -442,7 +442,7 @@ async function getQuery(params) {
             } else if (e === 'estadoFiltrar' && value) {
                 matchOpt.$match['estados.tipo'] = { $not: { $in: (typeof value === 'string') ? [value] : value } };
             } else if (e === 'areas') {
-                matchOpt.$match['solicitud.registros.valor.solicitudPrestacion.practicas.area._id'] = {
+                matchOpt.$match['solicitud.registros.valor.solicitudPrestacion.practicas.area.id'] = {
                     $in: (Array.isArray(value) ? value : [value])
                 };
             } else if (e === 'idPaciente') {
