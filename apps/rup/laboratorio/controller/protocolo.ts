@@ -100,7 +100,7 @@ export async function getProtocolos(params) {
             }
         });
         conditions.push({ $match: { practicasFiltradas: { $ne: [] } } }),
-            conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicasFiltradas', 0] } } });
+        conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicasFiltradas', 0] } } });
     } else {
         conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicas', 0] } } });
     }
