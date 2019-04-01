@@ -37,6 +37,7 @@ export const datosProtocoloHTML = `<style>
         <th>PRÁCTICA</th>
         <th>VALOR HALLADO</th>
         <th>VALORES DE REFERENCIA</th>
+        <th>MÉTODO</th>
         <th>FIRMA ELECTRÓNICA</th>
     </thead>
     <tbody>`;

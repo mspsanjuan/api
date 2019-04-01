@@ -139,6 +139,7 @@ export async function getProtocolos(params) {
     if (params.organizacionDerivacion || params.practicasValidadas) {
         if (params.organizacionDerivacion) {
             prestaciones.forEach((d) => {
+                // Se filtran las prácticas que son derivadas
                 d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
                     return !r.valor.estados.some(e => e.tipo === 'derivada');
                 });
@@ -147,6 +148,7 @@ export async function getProtocolos(params) {
 
         if (params.practicasValidadas) {
             prestaciones.forEach((d) => {
+                // Se filtran las prácticas que están validadas
                 d.ejecucion.registros = d.ejecucion.registros.filter((r) => {
                     return r.valor.resultado.valor && r.valor.resultado.valor !== ''
                         && r.valor.estados.some(e => e.tipo === 'validada');
@@ -154,10 +156,11 @@ export async function getProtocolos(params) {
             });
         }
 
+        // Se descartan las prestaciones que no poseen registros de ejecución
         prestaciones = prestaciones.filter((p) => p.ejecucion.registros.length > 0 );
     }
 
-    cargarValoresDeReferencia(prestaciones);
+    cargarInformacionResultado(prestaciones);
     return prestaciones;
 }
 
@@ -166,7 +169,7 @@ export async function getProtocolos(params) {
  *
  * @param {*} data
  */
-function cargarValoresDeReferencia(data) {
+function cargarInformacionResultado(data) {
     let getSexo = (sexo) => {
         if (sexo === 'femenino') {
             return 'F';
@@ -176,6 +179,9 @@ function cargarValoresDeReferencia(data) {
     };
     data.forEach((prestacion) => {
         prestacion.ejecucion.registros.forEach((registro) => {
+            if (!registro.valor.resultado.metodo) {
+                registro.valor.resultado.metodo = registro.valor.practica.presentaciones[0].metodo;
+            }
 
             if (registro.valor.practica.resultado.valorDefault && registro.valor.practica.resultado.valorDefault > 0 && !registro.valor.resultado.valor) {
                 registro.valor.resultado.valor = registro.valor.practica.resultado.valorDefault;

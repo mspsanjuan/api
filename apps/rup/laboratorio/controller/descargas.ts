@@ -1,4 +1,3 @@
-import { model } from './../../../../core/term/schemas/cie10';
 import { endReporteHTML } from './../templates/endReporte';
 import { pageBreakHTML } from './../templates/pageBreak';
 import { startReporteHTML } from './../templates/startReporte';
@@ -10,7 +9,6 @@ import { env } from 'process';
 import { calcularEdad } from './../../../../utils/utils';
 import { datosProtocoloHTML } from '../templates/datosProtocolo';
 import { getDatosFormacion } from '../../../../core/tm/controller/profesional';
-import { Types } from 'mongoose';
 
 moment.locale('es');
 
@@ -122,12 +120,17 @@ export class Documento {
                     registro.valor.valoresReferencia.valorMinimo + ' - ' + registro.valor.valoresReferencia.valorMaximo);
             }
 
-            html = html.replace('<!-- registro.valor.resultado.firmaElectronica -->',
-                registro.valor.estados[registro.valor.estados.length - 1].usuario.formacionGrado.profesion.nombre + ' ' +
-                registro.valor.estados[registro.valor.estados.length - 1].usuario.nombreCompleto + ' - MP: ' +
-                registro.valor.estados[registro.valor.estados.length - 1]
-                                                        .usuario.formacionGrado.matriculacion[  registro.valor.estados[registro.valor.estados.length - 1].usuario.formacionGrado.matriculacion.length - 1
-                                                    ].matriculaNumero);
+            if(registro.valor.resultado.metodo) {
+                html = html.replace('<!-- registro.valor.resultado.metodo -->', registro.valor.resultado.metodo)
+            }
+
+            const formacionGrado = registro.valor.estados[registro.valor.estados.length - 1].usuario.formacionGrado;
+            const firma = (formacionGrado ? (
+                        formacionGrado.profesion.nombre === 'BIOQUÍMICO' ? 'Bioq' : 'Prof.'
+                    ) + ' ' : '') +
+                    registro.valor.estados[registro.valor.estados.length - 1].usuario.nombreCompleto +
+                    (formacionGrado ? ' - MP: ' + formacionGrado.matriculacion[formacionGrado.matriculacion.length - 1].matriculaNumero : '');
+            html = html.replace('<!-- registro.valor.resultado.firmaElectronica -->', firma);
 
             return html;
         };
