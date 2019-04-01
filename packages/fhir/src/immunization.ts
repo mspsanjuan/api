@@ -4,7 +4,7 @@
  * [ASK] El code de extension puede ir en vaccineCode?
  * [ASk] Location no se sabe. Solo esta el texto
  */
-export function encode(nomivac) {
+export function encode(patientReference, nomivac) {
     return {
         resourceType: 'Immunization',
         id: nomivac.idvacuna,
@@ -37,9 +37,9 @@ export function encode(nomivac) {
         //         }
         //     ]
         // },
-        // patient: {
-        //     reference: 'http:\/\/hapi.fhir.org\/baseR4\/Patient\/IPS-examples-Patient-01'
-        // },
+        patient: {
+            reference: patientReference
+        },
         date: nomivac.fechaAplicacion,
         primarySource: false,
         // location: {

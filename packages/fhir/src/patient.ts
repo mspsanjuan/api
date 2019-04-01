@@ -82,6 +82,7 @@ export function encode(patient) {
                 break;
         }
         let pacienteFHIR = {
+            id: patient.id,
             resourceType: 'Patient',
             identifier: identificadores,
             active: patient.activo ? patient.activo : null, // Whether this patient's record is in active use

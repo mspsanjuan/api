@@ -140,6 +140,7 @@ export function filtrarRegistros(prestaciones: any[], { semanticTags }) {
         });
         registros = [...registros, ... regis];
     });
+    return registros;
 }
 
 export function buscarEnHuds(prestaciones, conceptos) {

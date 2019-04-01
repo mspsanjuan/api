@@ -63,6 +63,7 @@ export function encode(organization) {
 
         // Armamos la organizacion FHIR
         let organizacionFHIR = {
+            id: data.id,
             resourceType: 'Organization',
             identifier: identificadores,
             active: data.activo ? data.activo : null,
