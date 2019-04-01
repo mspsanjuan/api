@@ -1,12 +1,14 @@
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { getVacunas } from '../../vacunas/controller/VacunaController';
 import { getPrestaciones, filtrarRegistros } from './rup';
-import { Patient, Organization, Immunization, Condition, Composition, Bundle} from '@andes/fhir';
+import { Patient, Organization, Immunization, Condition, Composition, Bundle } from '@andes/fhir';
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
 import { Types } from 'mongoose';
+const request = require('request');
 
 const DOMAIN = 'http://app.andes.gob.ar';
-
+const hostItaliano = 'https://testapp.hospitalitaliano.org.ar/masterfile-federacion-service/fhir/Patient';
+const dominio = 'http://www.neuquen.gov.ar';
 
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
@@ -101,3 +103,22 @@ const device = {
         }
     ]
 };
+
+export function getListaDominios(idPaciente) {
+    return new Promise((resolve: any, reject: any) => {
+        const url = `${hostItaliano}/$patient-location?identifier=${dominio}|${idPaciente}`;
+        const options = {
+            url,
+            method: 'GET',
+            headers: {
+                Authorization: ''
+            }
+        };
+        request(options, (error, response, body) => {
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+                return resolve(JSON.parse(body));
+            }
+            return resolve(error || body);
+        });
+    });
+}
