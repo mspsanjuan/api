@@ -7,4 +7,4 @@ export const startReporteHTML = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
-<body style='font-family: Arial; font-size: 12px; '>`;
+<body style='font-family: sans-serif; font-size: 12px; '>`;

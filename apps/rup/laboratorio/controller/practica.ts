@@ -103,14 +103,19 @@ export async function findByDescripcion(paramBusqueda, soloSimples, noNomenclada
             { nombre: { $regex: paramBusqueda } },
             { 'concepto.term': { $regex: paramBusqueda } }
         ],
-        $and: []
     };
 
     if (!noNomencladas) {
+        if (!query.$and) {
+            query.$and = [];
+        }
         query.$and.push({ codigoNomenclador: { $ne: '' } });
     }
 
     if (soloSimples) {
+        if (!query.$and) {
+            query.$and = [];
+        }
         query.$and.push({ categoria: { $eq: 'simple' } });
     }
 
