@@ -4,11 +4,12 @@ import { getPrestaciones, filtrarRegistros } from './rup';
 import { Patient, Organization, Immunization, Condition, Composition, Bundle } from '@andes/fhir';
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
 import { Types } from 'mongoose';
+import { handleHttpRequest } from '../../../utils/requestHandler';
 const request = require('request');
 
-const DOMAIN = 'http://app.andes.gob.ar';
-const hostItaliano = 'https://testapp.hospitalitaliano.org.ar/masterfile-federacion-service/fhir/Patient';
-const dominio = 'http://www.neuquen.gov.ar';
+const DOMAIN = 'http://www.neuquen.gov.ar';
+const IPSHost = 'https://testapp.hospitalitaliano.org.ar/masterfile-federacion-service/fhir/Patient';
+
 
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
@@ -104,21 +105,29 @@ const device = {
     ]
 };
 
-export function getListaDominios(idPaciente) {
-    return new Promise((resolve: any, reject: any) => {
-        const url = `${hostItaliano}/$patient-location?identifier=${dominio}|${idPaciente}`;
-        const options = {
-            url,
-            method: 'GET',
-            headers: {
-                Authorization: ''
-            }
-        };
-        request(options, (error, response, body) => {
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-                return resolve(JSON.parse(body));
-            }
-            return resolve(error || body);
-        });
-    });
+export async function getListaDominios(idPaciente) {
+    const url = `${IPSHost}/$patient-location?identifier=${DOMAIN}|${idPaciente}`;
+    const options = {
+        url,
+        method: 'GET',
+        headers: {
+            Authorization: ''
+        }
+    };
+    const [status, body] = await handleHttpRequest(options);
+    if (status >= 200 && status <= 300) {
+        const bundle = JSON.parse(body);
+        if (bundle.total > 0) {
+            const resp = bundle.entry.map((r) => {
+                return {
+                    id: r.resource.id,
+                    name: r.resource.name,
+                    identifier: r.resource.identifier
+                };
+            });
+            return resp;
+        }
+    }
+    return [];
+
 }
