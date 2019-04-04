@@ -114,6 +114,7 @@ export async function getListaDominios(idPaciente) {
             Authorization: ''
         }
     };
+
     const [status, body] = await handleHttpRequest(options);
     if (status >= 200 && status <= 300) {
         const bundle = JSON.parse(body);

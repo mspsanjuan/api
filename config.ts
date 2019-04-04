@@ -211,6 +211,11 @@ export const modules = {
         path: './modules/geonode/routes',
         route: '/modules/geonode',
         middleware: appMiddleware
+    },
+    ips: {
+        active: true,
+        path: './modules/ips/routes',
+        route: '/modules/ips'
     }
 };
 
