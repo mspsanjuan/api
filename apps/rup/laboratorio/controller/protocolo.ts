@@ -51,18 +51,16 @@ const lookupResultadoAnterior = {
         pipeline: [
             {
                 $match: {
-                    $expr: {
-                        $and: [
-                            { $eq: ['$solicitud.tipoPrestacion.conceptId', '15220000'] },
-                            { $eq: ['$paciente.id', '$$paciente'] }
-                        ]
-                    }
+                    $and: [
+                        { 'solicitud.tipoPrestacion.conceptId': '15220000' },
+                        { 'paciente.id': '$$paciente' }
+                    ]
                 }
             },
             { $unwind: '$ejecucion.registros' },
-            { $match: { $expr: { $eq: ['$ejecucion.registros.concepto.conceptId', '$$conceptId'] } } },
+            { $match: { 'ejecucion.registros.concepto.conceptId': '$$conceptId' }},
             { $unwind: '$ejecucion.registros.valor.estados' },
-            { $match: { $expr: { $eq: ['$ejecucion.registros.valor.estados.tipo', 'validada'] } } },
+            { $match: { 'ejecucion.registros.valor.estados.tipo': 'validada' }  },
             { $sort: { 'ejecucion.registros.createdAt': 1 } },
             { $limit: 1 },
             {
@@ -84,8 +82,61 @@ const lookupResultadoAnterior = {
  * @returns
  */
 export async function getProtocolos(params) {
-    let conditions = await getQuery(params);
-    conditions.unshift({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
+    // let conditions = await getQuery(params);
+    // conditions.unshift({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
+    let conditions = [];
+    conditions.push({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
+    conditions.push({ $match: { 'ejecucion.registros.valor.organizacionDestino._id': params.organizacionDestino } });
+    conditions.push({
+        $match:  {
+            $and: [
+                { 'solicitud.fecha': { $gte: moment(params.solicitudDesde).startOf('day').toDate() }},
+                { 'solicitud.fecha': { $lte: moment(params.solicitudHasta).endOf('day').toDate() }}
+            ]
+        }
+    });
+
+    if (params.prioridad) {
+        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.prioridad.id': params.prioridad } });
+    }
+
+    if (params.origen) {
+        conditions.push({ $match: { 'solicitud.ambitoOrigen': params.origen } });
+    }
+
+    if (params.numProtocoloDesde) {
+        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $gte: Number(params.numProtocoloDesde) }}});
+    }
+
+    if (params.numProtocoloHasta) {
+        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $lte: Number(params.numProtocoloHasta) }}});
+    }
+
+    if (params.estado) {
+        conditions.push({ $match: { 'estados.tipo':  { $in: (typeof params.estado === 'string') ? [params.estado] : params.estado }}});
+    }
+
+    if (params.estadoFiltrar) {
+        conditions.push({ $match: { 'estados.tipo': { $not: { $in: (typeof params.estadoFiltrar === 'string') ? [params.estadoFiltrar] : params.estadoFiltrar }}}});
+    }
+
+    if (params.areas) {
+        conditions.push({
+            $match: {
+                'solicitud.registros.valor.solicitudPrestacion.practicas.area.id': {
+                    $in: (Array.isArray(params.areas) ? params.areas : [params.areas])
+                }
+            }
+        });
+    }
+
+    if (params.idPaciente) {
+        let { paciente } = await buscarPaciente(params.idPaciente);
+        if (paciente) {
+            conditions.push({ $match: { 'paciente.id': { $in: paciente.vinculos }} });
+        }
+    }
+
     conditions.push({ $unwind: '$ejecucion.registros' });
     conditions.push({ $lookup: lookup });
     if (params.areas && !params.practicas) {
@@ -451,59 +502,6 @@ export async function enviarAutoanalizador(numeroProtocolo?: string) {
     return;
 }
 
-
-/**
- *
- *
- * @param {*} params
- * @returns
- */
-async function getQuery(params) {
-    let matches;
-    const matchKeys = {
-        organizacionDestino: 'ejecucion.registros.valor.organizacionDestino._id',
-        tipoPrestacionSolicititud: 'solicitud.tipoPrestacion.conceptId',
-        prioridad: 'solicitud.registros.valor.solicitudPrestacion.prioridad.id',
-        origen: 'solicitud.ambitoOrigen'
-    };
-
-    matches = await Promise.all(Object.keys(params).map(async e => {
-        return new Promise(async (resolve, rej) => {
-            let value = params[e];
-            let matchOpt = { $match: {} };
-            if (e === 'solicitudDesde') {
-                matchOpt.$match['solicitud.fecha'] = { $gte: moment(value).startOf('day').toDate() as any };
-            } else if (e === 'solicitudHasta') {
-                matchOpt.$match['solicitud.fecha'] = { $lte: moment(value).endOf('day').toDate() as any };
-            } else if (e === 'numProtocoloDesde') {
-                matchOpt.$match['solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero'] = { $gte: Number(value) };
-            } else if (e === 'numProtocoloHasta') {
-                matchOpt.$match['solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero'] = { $lte: Number(value) };
-            } else if (e === 'estado') {
-                matchOpt.$match['estados.tipo'] = { $in: (typeof value === 'string') ? [value] : value };
-            } else if (e === 'estadoFiltrar' && value) {
-                matchOpt.$match['estados.tipo'] = { $not: { $in: (typeof value === 'string') ? [value] : value } };
-            } else if (e === 'areas') {
-                matchOpt.$match['solicitud.registros.valor.solicitudPrestacion.practicas.area.id'] = {
-                    $in: (Array.isArray(value) ? value : [value])
-                };
-            } else if (e === 'idPaciente') {
-                let { paciente } = await buscarPaciente(value);
-                if (paciente) {
-                    matchOpt.$match['paciente.id'] = { $in: paciente.vinculos };
-                } else {
-                    resolve();
-                }
-            } else {
-                if (matchKeys[e]) {
-                    matchOpt.$match[matchKeys[e]] = value;
-                }
-            }
-            resolve(matchOpt);
-        });
-    }));
-    return matches;
-}
 
 /**
  *
