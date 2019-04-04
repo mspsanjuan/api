@@ -88,19 +88,32 @@ export async function getProtocolos(params) {
     conditions.unshift({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
     conditions.push({ $unwind: '$ejecucion.registros' });
     conditions.push({ $lookup: lookup });
-    if (params.areas) {
+    if (params.areas && !params.practicas) {
         let areas = Array.isArray(params.areas) ? params.areas : [params.areas];
         conditions.push({
             $addFields: {
-                practicasFiltradas: {
+                practicasFiltradasArea: {
                     $filter: {
                         input: '$practicas', as: 'p', cond: { $in: ['$$p.area.id', areas] }
                     }
                 }
             }
         });
-        conditions.push({ $match: { practicasFiltradas: { $ne: [] } } }),
-            conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicasFiltradas', 0] } } });
+        conditions.push({ $match: { practicasFiltradasArea: { $ne: [] } } }),
+            conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicasFiltradasArea', 0] } } });
+    } else if (params.practicas) {
+        let practicas = Array.isArray(params.practicas) ? params.practicas : [params.practicas];
+        conditions.push({
+            $addFields: {
+                practicasFiltradasPractica: {
+                    $filter: {
+                        input: '$practicas', as: 'p', cond: { $in: ['$$p.id', practicas] }
+                    }
+                }
+            }
+        });
+        conditions.push({ $match: { practicasFiltradasPractica: { $ne: [] } } }),
+            conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicasFiltradasPractica', 0] } } });
     } else {
         conditions.push({ $addFields: { 'ejecucion.registros.valor.practica': { $arrayElemAt: ['$practicas', 0] } } });
     }
@@ -179,7 +192,7 @@ export async function getProtocolos(params) {
         }
 
         // Se descartan las prestaciones que no poseen registros de ejecución
-        prestaciones = prestaciones.filter((p) => p.ejecucion.registros.length > 0 );
+        prestaciones = prestaciones.filter((p) => p.ejecucion.registros.length > 0);
     }
 
     cargarInformacionResultado(prestaciones);
