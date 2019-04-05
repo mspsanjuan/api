@@ -91,7 +91,7 @@ export function encode(patient) {
                 family: patient.apellido,
                 given: patient.nombre,
                 text: `${patient.nombre} ${patient.apellido}`
-                // [TODO] Confirmar si va el _family
+                // [DONE] Confirmar si va el _family -> SI VA!!!!
             }],
             gender: genero, // male | female | other | unknown
             birthDate: patient.fechaNacimiento,

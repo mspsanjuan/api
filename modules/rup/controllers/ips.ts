@@ -10,6 +10,7 @@ const request = require('request');
 const DOMAIN = 'http://www.neuquen.gov.ar';
 const IPSHost = 'https://testapp.hospitalitaliano.org.ar/masterfile-federacion-service/fhir/Patient';
 
+// [TODO] No repetir conceptos evolucionados!!!!
 
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
