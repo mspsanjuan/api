@@ -22,8 +22,12 @@ export async function getCarpetasSolicitud(req) {
     const horaInicio = query.fechaDesde;
     const horaFin = query.fechaHasta;
 
-    const manuales = await getSolicitudesManuales({ organizacionId: organizacion, tipoPrestacionId: tipoPrestacion, espacioFisicoId: espacioFisico, profesionalId: profesional, horaInicio, horaFin });
-    const automaticas = await getSolicitudesAutomaticas(organizacion, tipoPrestacion, espacioFisico, profesional, horaInicio, horaFin);
+    let manuales = await getSolicitudesManuales({ organizacionId: organizacion, tipoPrestacionId: tipoPrestacion, espacioFisicoId: espacioFisico, profesionalId: profesional, horaInicio, horaFin });
+    let automaticas = await getSolicitudesAutomaticas(organizacion, tipoPrestacion, espacioFisico, profesional, horaInicio, horaFin);
+
+    if (!query.mostrarPrestamos) {  // Filtro de solicitudes que estan en estado "Prestada"
+        automaticas = automaticas.filter(autom => autom.estado !== constantes.EstadosPrestamosCarpeta.Prestada);
+    }
 
     let solicitudes = [...manuales, ...automaticas];
     // Por cada solicitud se busca y se agrega ultima historia clinica (conceptId: 2881000013106)
@@ -201,6 +205,36 @@ async function getSolicitudesAutomaticas(organizacionId: string, tipoPrestacion:
             matchCarpeta['horaInicio']['$lte'] = new Date(horaFin);
         }
     }
+    const pipelineSinCarpeta = [
+        { $match: matchCarpeta },
+        { $unwind: '$bloques' },
+        { $addFields: { turno: { $concatArrays: ['$sobreturnos', '$bloques.turnos'] } }},
+        { $unwind: '$turno' },
+        { $match: {'turno.estado': { $eq: 'asignado' }}},
+        { $match: {'turno.paciente.carpetaEfectores': {$eq: null}}},
+        {
+            $project: {
+                _id: '$turno.paciente._id',
+                fecha: '$turno.horaInicio',
+                paciente: '$turno.paciente',
+                organizacion: organizacionId,
+                numero: '',
+                estado: '',
+                tipo: constantes.TipoSolicitud.Automatica,
+                datosPrestamo: {
+                    agendaId: '$_id',
+                    observaciones: '',
+                    turno: {
+                        id: '$turno._id',
+                        profesionales: '$profesionales',
+                        espacioFisico: '$espacioFisico',
+                        tipoPrestacion: '$turno.tipoPrestacion'
+                    }
+                },
+                ultimoCDA: []
+            }
+        }
+    ];
 
     const pipelineCarpeta = [
         { $match: matchCarpeta },
@@ -210,7 +244,7 @@ async function getSolicitudesAutomaticas(organizacionId: string, tipoPrestacion:
         { $match: {'turno.estado': { $eq: 'asignado' }}},
         { $unwind: '$turno.paciente.carpetaEfectores' },
         { $match: {'turno.paciente.carpetaEfectores.organizacion._id': {$eq: new ObjectId(organizacionId)}}},
-        {$addFields: {nro: '$turno.paciente.carpetaEfectores.nroCarpeta'}},
+        { $addFields: {nro: '$turno.paciente.carpetaEfectores.nroCarpeta'}},
         {
             $lookup: {
                 // Se busca el último prestamo para verificar el estado de la huds
@@ -245,7 +279,7 @@ async function getSolicitudesAutomaticas(organizacionId: string, tipoPrestacion:
                             $cond: {
                                 if: {$eq: [{$size: '$prestamoCarpeta.estado'}, 0]},
                                 then: constantes.EstadosPrestamosCarpeta.EnArchivo,
-                                else: '$prestamoCarpeta.estado',
+                                else: { $arrayElemAt: ['$prestamoCarpeta.estado', 0] },
                             }
                         }
                     }
@@ -265,8 +299,10 @@ async function getSolicitudesAutomaticas(organizacionId: string, tipoPrestacion:
             }
         }
     ];
-
-    return await toArray(agenda.aggregate(pipelineCarpeta).allowDiskUse(true).cursor({}).exec());
+    const dataSinCarpeta = toArray(agenda.aggregate(pipelineSinCarpeta).allowDiskUse(true).cursor({}).exec());
+    const dataConCarpeta = toArray(agenda.aggregate(pipelineCarpeta).allowDiskUse(true).cursor({}).exec());
+    const [sinCarpeta, conCarpeta] = await Promise.all([dataSinCarpeta, dataConCarpeta]);
+    return conCarpeta.concat(sinCarpeta);
 }
 
 
