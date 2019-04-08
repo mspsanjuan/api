@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as scss from 'node-sass';
 import * as pdf from 'html-pdf';
-// import * as htmlPdf from 'html-pdf-chrome';
 import * as moment from 'moment';
 import { Auth } from '../../../auth/auth.class';
 import { model as Prestacion } from '../../rup/schemas/prestacion';
@@ -127,7 +126,6 @@ export class Documento {
             .replace('<!--indicaciones-->', plan.valor.solicitudPrestacion.indicaciones)
             .replace('<!--organizacionDestino-->', (plan.valor.solicitudPrestacion.organizacionDestino ? plan.valor.solicitudPrestacion.organizacionDestino.nombre : ''))
             .replace('<!--profesionalesDestino-->', plan.valor.solicitudPrestacion.profesionalesDestino ? plan.valor.solicitudPrestacion.profesionalesDestino.map(y => y.nombreCompleto).join(' ') : '');
-
     }
 
     // 'procedimiento' || 'entidad observable' || 'régimen/tratamiento' || 'elemento de registro'
@@ -155,7 +153,6 @@ export class Documento {
             .replace('<!--valor-->', valor)
             // .replace('<!--valor-->', (proc.valor || this.getRegistros(proc)))
             .replace('<!--motivoPrincipalDeConsulta-->', proc.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '');
-
     }
 
     // 'procedimiento' || 'hallazgo' || 'trastorno'
@@ -245,6 +242,7 @@ export class Documento {
     }
 
     static informeRegistros: any[] = [];
+    static html: string = '';
     static hallazgoTemplate = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/includes/hallazgo.html'), 'utf8');
     static procedimientoTemplate = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/includes/procedimiento.html'), 'utf8');
     static planTemplate = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/includes/solicitud.html'), 'utf8');
@@ -327,7 +325,7 @@ export class Documento {
         });
     }
 
-    private static async generarHTML(req) {
+    private static async generarHTML(req): Promise<any> {
         return new Promise(async (resolve, reject) => {
             try {
 
@@ -400,7 +398,6 @@ export class Documento {
                         }
                     }
 
-
                     let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
                     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
                     await this.generarInforme(registros);
@@ -416,7 +413,7 @@ export class Documento {
 
 
                     // Se leen header y footer (si se le pasa un encoding, devuelve un string)
-                    let html = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/informe.html'), 'utf8');
+                    this.html = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/informe.html'), 'utf8');
 
                     let nombreCompleto = paciente.apellido + ', ' + paciente.nombre;
                     let fechaNacimiento = paciente.fechaNacimiento ? moment(paciente.fechaNacimiento).format('DD/MM/YYYY') : 's/d';
@@ -435,7 +432,7 @@ export class Documento {
                     let orgacionacionDireccionSolicitud = organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre;
 
                     // HEADER
-                    html = html
+                    this.html = this.html
                         .replace('<!--paciente-->', nombreCompleto)
                         .replace('<!--datosRapidosPaciente-->', datosRapidosPaciente)
                         .replace('<!--fechaNacimiento-->', fechaNacimiento)
@@ -449,19 +446,36 @@ export class Documento {
                     let fechaValidacion = new Date(prestacion.estados.find(x => x.tipo === 'validada').createdAt);
 
                     // BODY
-                    html = html
-                        .replace('<!--fechaIngreso-->', (prestacion.ejecucion.registros[0].valor && prestacion.ejecucion.registros[0].valor.fechaDesde) ? '<b>Fecha de ingreso: </b>' + moment(prestacion.ejecucion.registros[0].valor.fechaDesde).format('DD/MM/YYYY') : '')
-                        .replace('<!--fechaEgreso-->', (prestacion.ejecucion.registros[0].valor && prestacion.ejecucion.registros[0].valor.fechaHasta) ? '<b>Fecha de egreso: </b>' + moment(prestacion.ejecucion.registros[0].valor.fechaHasta).format('DD/MM/YYYY') : '')
-                        .replace('<!--tipoPrestacion-->', tipoPrestacion)
+                    this.html = this.html.replace('<!--tipoPrestacion-->', tipoPrestacion)
                         .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--tituloFechaEjecucion-->', tituloFechaEjecucion)
                         .replace('<!--fechaEjecucion-->', moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--tituloInforme-->', tituloInforme ? tituloInforme : '')
                         // .replace('<!--contenidoInforme-->', contenidoInforme ? contenidoInforme : '')
+                        .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length) ?
+                            contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor :
+                                JSON.stringify(x.valor)).join('') : this.informeRegistros);
+
+                    if (prestacion.solicitud.tipoPrestacion.conceptId === '2341000013106') {
+                        this.html = this.html.replace('<!--fechaIngreso-->', prestacion.ejecucion.registros[0].valor.fechaDesde ?
+                            '<b>Fecha de ingreso: </b>' + moment(prestacion.ejecucion.registros[0].valor.fechaDesde).format('DD/MM/YYYY') : '')
+                            .replace('<!--fechaEgreso-->', prestacion.ejecucion.registros[0].valor.fechaHasta ?
+                                '<b>Fecha de egreso: </b>' + moment(prestacion.ejecucion.registros[0].valor.fechaHasta).format('DD/MM/YYYY') : '');
+                    }
+
+
+                    this.html = this.html
+                        .replace('<!--tipoPrestacion-->', tipoPrestacion)
+                        .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--tituloFechaEjecucion-->', tituloFechaEjecucion)
+                        .replace('<!--fechaEjecucion-->', moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--tituloInforme-->', tituloInforme ? tituloInforme : '')
                         .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length) ? contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join('') : this.informeRegistros);
+
                     // FOOTER
-                    html = html
+                    this.html = this.html
                         .replace('<!--profesionalFirmante1-->', profesionalSolicitud)
                         .replace('<!--usuario-->', Auth.getUserName(req))
                         .replace(/(<!--fechaActual-->)/g, moment().format('DD/MM/YYYY HH:mm') + ' hs')
@@ -472,9 +486,8 @@ export class Documento {
                         .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY'));
 
                     if (config.informe && motivoPrincipalDeConsulta) {
-                        html = html
+                        this.html = this.html
                             .replace('<!--motivoPrincipalDeConsulta-->', motivoPrincipalDeConsulta);
-
                     }
 
                     // Se carga logo del efector, si no existe se muestra el nombre del efector como texto
@@ -482,10 +495,10 @@ export class Documento {
                     try {
                         let logoEfector;
                         logoEfector = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/efectores/' + nombreLogo + '.png'));
-                        html = html
+                        this.html = this.html
                             .replace('<!--logoOrganizacion-->', `<img class="logo-efector" src="data:image/png;base64,${logoEfector.toString('base64')}">`);
                     } catch (fileError) {
-                        html = html
+                        this.html = this.html
                             .replace('<!--logoOrganizacion-->', `<b class="no-logo-efector">${prestacion.solicitud.organizacion.nombre}</b>`);
                     }
 
@@ -496,7 +509,7 @@ export class Documento {
                     let logoPDP2 = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/logo-pdp-h.png'));
 
                     // Firmas
-                    html = html
+                    this.html = this.html
                         .replace('<!--logoAdicional-->', `<img class="logo-adicional" src="data:image/png;base64,${logoAdicional.toString('base64')}">`)
                         .replace('<!--logoAndes-->', `<img class="logo-andes" src="data:image/png;base64,${logoAndes.toString('base64')}">`)
                         .replace('<!--logoPDP-->', `<img class="logo-pdp" src="data:image/png;base64,${logoPDP.toString('base64')}">`)
@@ -506,7 +519,7 @@ export class Documento {
                     this.informeRegistros = [];
                     this.nivelPadre = 0;
 
-                    resolve(html);
+                    resolve(this.html);
 
                 } else {
                     resolve(false);
@@ -577,7 +590,7 @@ export class Documento {
      * @param next ExpressJS next
      * @param options html-pdf/PhantonJS rendering options
      */
-    static descargar(req, res, next, options = null) {
+    static descargar(req, options = null) {
 
         return new Promise(async (resolve, reject) => {
 
@@ -589,6 +602,7 @@ export class Documento {
                     // https://www.npmjs.com/package/html-pdf
                     // http://phantomjs.org/api/webpage/property/paper-size.html
                     let phantomPDFOptions: pdf.CreateOptions = {
+                        // phantomPath: './node_modules/phantomjs-prebuilt/bin/phantomjs',
                         format: 'A4',
                         border: {
                             // default is 0, units: mm, cm, in, px
@@ -612,8 +626,11 @@ export class Documento {
                     this.options = options || phantomPDFOptions;
 
                     await this.generarHTML(req).then(async htmlPDF => {
-                        htmlPDF = htmlPDF + this.generarCSS();
+                        htmlPDF = htmlPDF.toString() + this.generarCSS();
+
                         await pdf.create(htmlPDF, this.options).toFile((err2, file): any => {
+
+                            console.log(file);
                             // async
                             // const pdf2 = await htmlPdf.create(htmlPDF, options);
                             // await pdf2.toFile('/tmp/test.pdf');
@@ -624,6 +641,8 @@ export class Documento {
                                 reject(err2);
                             }
 
+                            this.informeRegistros = [];
+                            this.html = '';
                             resolve(file.filename);
 
                         });
@@ -653,7 +672,6 @@ export class Documento {
                             left: '0cm'
                         },
                         header: {
-                            top: '0cm',
                             height: '0cm'
                         },
                         footer: {
