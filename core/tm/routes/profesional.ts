@@ -10,7 +10,6 @@ import * as stream from 'stream';
 import * as base64 from 'base64-stream';
 import { Auth } from '../../../auth/auth.class';
 import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMatriculaPosgrado, migrarTurnos } from '../controller/profesional';
-import { IGuiaProfesional } from '../interfaces/interfaceProfesional';
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
 
@@ -373,6 +372,9 @@ router.get('/profesionales/:id*?', Auth.authenticate(), (req, res, next) => {
         query.exec((err, data) => {
             if (err) {
                 return next(err);
+            }
+            if (req.query.nombreCompleto) {
+                data = data.map(prof => new ProfesionalBasicResponse(prof));
             }
             res.json(data);
         });
