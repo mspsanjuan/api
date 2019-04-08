@@ -58,9 +58,9 @@ const lookupResultadoAnterior = {
                 }
             },
             { $unwind: '$ejecucion.registros' },
-            { $match: { 'ejecucion.registros.concepto.conceptId': '$$conceptId' }},
+            { $match: { 'ejecucion.registros.concepto.conceptId': '$$conceptId' } },
             { $unwind: '$ejecucion.registros.valor.estados' },
-            { $match: { 'ejecucion.registros.valor.estados.tipo': 'validada' }  },
+            { $match: { 'ejecucion.registros.valor.estados.tipo': 'validada' } },
             { $sort: { 'ejecucion.registros.createdAt': 1 } },
             { $limit: 1 },
             {
@@ -88,13 +88,14 @@ export async function getProtocolos(params) {
     conditions.push({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
     conditions.push({ $match: { 'ejecucion.registros.valor.organizacionDestino._id': params.organizacionDestino } });
     conditions.push({
-        $match:  {
+        $match: {
             $and: [
-                { 'solicitud.fecha': { $gte: moment(params.solicitudDesde).startOf('day').toDate() }},
-                { 'solicitud.fecha': { $lte: moment(params.solicitudHasta).endOf('day').toDate() }}
+                { 'solicitud.fecha': { $gte: moment(params.solicitudDesde).startOf('day').toDate() } },
+                { 'solicitud.fecha': { $lte: moment(params.solicitudHasta).endOf('day').toDate() } }
             ]
         }
     });
+    conditions.push({ $addFields: { ultimoEstado: { $arrayElemAt: ['$estados', -1] } } });
 
     if (params.prioridad) {
         conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.prioridad.id': params.prioridad } });
@@ -105,19 +106,19 @@ export async function getProtocolos(params) {
     }
 
     if (params.numProtocoloDesde) {
-        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $gte: Number(params.numProtocoloDesde) }}});
+        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $gte: Number(params.numProtocoloDesde) } } });
     }
 
     if (params.numProtocoloHasta) {
-        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $lte: Number(params.numProtocoloHasta) }}});
+        conditions.push({ $match: { 'solicitud.registros.valor.solicitudPrestacion.numeroProtocolo.numero': { $lte: Number(params.numProtocoloHasta) } } });
     }
 
     if (params.estado) {
-        conditions.push({ $match: { 'estados.tipo':  { $in: (typeof params.estado === 'string') ? [params.estado] : params.estado }}});
+        conditions.push({ $match: { 'ultimoEstado.tipo': { $in: (Array.isArray(params.estado) ? params.estado : [params.estado]) } } });
     }
 
     if (params.estadoFiltrar) {
-        conditions.push({ $match: { 'estados.tipo': { $not: { $in: (typeof params.estadoFiltrar === 'string') ? [params.estadoFiltrar] : params.estadoFiltrar }}}});
+        conditions.push({ $match: { 'ultimoEstado.tipo': { $not: { $in: (typeof params.estadoFiltrar === 'string') ? [params.estadoFiltrar] : params.estadoFiltrar } } } });
     }
 
     if (params.areas) {
@@ -133,7 +134,7 @@ export async function getProtocolos(params) {
     if (params.idPaciente) {
         let { paciente } = await buscarPaciente(params.idPaciente);
         if (paciente) {
-            conditions.push({ $match: { 'paciente.id': { $in: paciente.vinculos }} });
+            conditions.push({ $match: { 'paciente.id': { $in: paciente.vinculos } } });
         }
     }
 
