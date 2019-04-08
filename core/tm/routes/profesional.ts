@@ -9,7 +9,7 @@ import { makeFsFirmaAdmin } from '../schemas/firmaAdmin';
 import * as stream from 'stream';
 import * as base64 from 'base64-stream';
 import { Auth } from '../../../auth/auth.class';
-import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMatriculaPosgrado, migrarTurnos } from '../controller/profesional';
+import { formacionCero, matriculaCero, migrarTurnos } from '../controller/profesional';
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
 import { ProfesionalBasicResponse } from '../classes/profesionalResponse.class';
