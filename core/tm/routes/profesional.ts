@@ -12,6 +12,7 @@ import { Auth } from '../../../auth/auth.class';
 import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMatriculaPosgrado, migrarTurnos } from '../controller/profesional';
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
+import { ProfesionalBasicResponse } from '../classes/profesionalResponse.class';
 
 
 let router = express.Router();
