@@ -6,6 +6,7 @@ import * as express from 'express';
 import * as mongoose from 'mongoose';
 import { ProfesionalMeta } from './../schemas/profesionalMeta';
 import { toArray } from '../../../utils/utils';
+import { ITipoPrestacion } from 'core/tm/schemas/tipoPrestacion';
 
 const router = express.Router();
 
@@ -64,7 +65,7 @@ router.get('/frecuentesProfesional', async (req, res, next) => {
     ];
 
     try {
-        const frecuente = await toArray(ProfesionalMeta.aggregate(pipeline).cursor({}).exec());
+        const frecuente: ITipoPrestacion[] = await toArray(ProfesionalMeta.aggregate(pipeline).cursor({}).exec());
         res.json(frecuente);
     } catch (err) {
         return next(err);
