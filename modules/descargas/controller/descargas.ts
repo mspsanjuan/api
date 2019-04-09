@@ -12,6 +12,9 @@ import * as conceptoTurneable from '../../../core/tm/schemas/tipoPrestacion';
 import * as path from 'path';
 import { env } from 'process';
 import * as rupStore from '../../../modules/rup/controllers/rupStore';
+import * as Handlebars from 'handlebars';
+// const Handlebars = require('handlebars');
+
 
 moment.locale('es');
 
@@ -453,9 +456,9 @@ export class Documento {
                         .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--tituloInforme-->', tituloInforme ? tituloInforme : '')
                         // .replace('<!--contenidoInforme-->', contenidoInforme ? contenidoInforme : '')
-                        .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length) ?
-                            contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor :
-                                JSON.stringify(x.valor)).join('') : this.informeRegistros);
+                        .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length)
+                            ? (contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join(''))
+                            : this.informeRegistros);
 
                     if (prestacion.solicitud.tipoPrestacion.conceptId === '2341000013106') {
                         this.html = this.html.replace('<!--fechaIngreso-->', prestacion.ejecucion.registros[0].valor.fechaDesde ?
@@ -464,7 +467,6 @@ export class Documento {
                                 '<b>Fecha de egreso: </b>' + moment(prestacion.ejecucion.registros[0].valor.fechaHasta).format('DD/MM/YYYY') : '');
                     }
 
-
                     this.html = this.html
                         .replace('<!--tipoPrestacion-->', tipoPrestacion)
                         .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs')
@@ -472,7 +474,9 @@ export class Documento {
                         .replace('<!--fechaEjecucion-->', moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
                         .replace('<!--tituloInforme-->', tituloInforme ? tituloInforme : '')
-                        .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length) ? contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join('') : this.informeRegistros);
+                        .replace('<!--registros-->', (contenidoInforme && contenidoInforme.length)
+                            ? contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join('')
+                            : this.informeRegistros);
 
                     // FOOTER
                     this.html = this.html
@@ -518,6 +522,13 @@ export class Documento {
                     // Limpio el informe
                     this.informeRegistros = [];
                     this.nivelPadre = 0;
+
+                    const data = {
+                        datosRapidosPaciente: 'lkasjdlkjsadlkajsld'
+                    }
+                    const template = Handlebars.compile(this.html);
+                    this.html = template(data);
+                    // console.log(this.html);
 
                     resolve(this.html);
 
