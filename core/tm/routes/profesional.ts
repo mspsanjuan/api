@@ -9,7 +9,7 @@ import { makeFsFirmaAdmin } from '../schemas/firmaAdmin';
 import * as stream from 'stream';
 import * as base64 from 'base64-stream';
 import { Auth } from '../../../auth/auth.class';
-import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMatriculaPosgrado, migrarTurnos } from '../controller/profesional';
+import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMatriculaPosgrado, migrarTurnos, profesionalesToEconomia } from '../controller/profesional';
 import { IGuiaProfesional } from '../interfaces/interfaceProfesional';
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
@@ -721,5 +721,10 @@ router.post('/profesionales/formacionCero', async (req, res, next) => {
 
 // });
 
+router.post('/profesionales/economia', async (req, res, next) => {
+    let ress = await profesionalesToEconomia();
+    res.json(ress);
+
+});
 
 export = router;

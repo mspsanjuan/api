@@ -1,3 +1,4 @@
+import { Documento } from './../../../modules/descargas/controller/descargas';
 import * as mongoose from 'mongoose';
 import { profesional } from '../schemas/profesional';
 import * as moment from 'moment';
@@ -6,6 +7,7 @@ import { turnoSolicitado } from '../../../modules/matriculaciones/schemas/turnoS
 import * as turno from '../../../modules/matriculaciones/schemas/turno';
 import { userScheduler } from '../../../config.private';
 import { Auth } from './../../../auth/auth.class';
+import { EventCore } from '@andes/event-bus';
 
 /**
  * funcion que controla los vencimientos de la matriculas y de ser necesario envia sms y email avisando al profesional.
@@ -122,4 +124,14 @@ export async function matriculaCero() {
 export async function formacionCero() {
     let profesionales: any = await profesional.find({ $where: 'this.formacionGrado.length > 1 && this.formacionGrado[0].matriculacion == null' }, (data: any) => { return data; });
     return profesionales;
+}
+
+export async function profesionalesToEconomia() {
+    console.log('esperando');
+    let profesionales: any = await profesional.find({ documento: '4163905' }, (data: any) => { return data; });
+    for (let index = 0; index < profesionales.length; index++) {
+        const element = profesionales[index];
+        EventCore.emitAsync('matriculaciones:profesionales:create', elemen00t);
+        console.log(element, index);
+    }
 }
