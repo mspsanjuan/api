@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { IPS, getListaDominios } from '../../rup/controllers/ips';
+import { IPS, getListaDominios } from '../controller/ips';
 
 const router = express.Router();
 router.get('/:id', async (req, res, next) => {
@@ -19,6 +19,7 @@ router.get('/dominios/:id', async (req, res, next) => {
         return next(err);
     }
 });
+
 
 export = router;
 

@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { IPS, getListaDominios } from '../controllers/ips';
+import { IPS, getListaDominios } from '../../ips/controller/ips';
 
 const router = express.Router();
 router.get('/ips/:id', async (req, res, next) => {
