@@ -10,6 +10,7 @@ router.get('/hojatrabajo', async (req, res, next) => {
     if (req.query.area) {
         query['area.id'] = req.query.area;
     }
+    query['baja'] = req.query.baja === 'true' ? true : false;
     HojaTrabajo.find(query).then((hojas: any[]) => {
         res.json(hojas);
     });
@@ -64,6 +65,7 @@ router.patch('/hojatrabajo/:id', (req, res, next) => {
             data.nombre = req.body.nombre ? req.body.nombre : data.nombre;
             data.area = req.body.area ? req.body.area : data.area;
             data.protocolo = req.body.protocolo ? req.body.protocolo : data.protocolo;
+            data.baja = req.body.baja ? req.body.baja : data.baja;
             if (req.body.paciente) {
                 data.paciente = req.body.paciente;
             }
