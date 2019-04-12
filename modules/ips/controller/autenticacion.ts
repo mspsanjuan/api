@@ -1,36 +1,209 @@
 import * as configPrivate from '../../../config.private';
 import * as jwt from 'jsonwebtoken';
+import * as request from 'request';
+import { handleHttpRequest } from '../../../utils/requestHandler';
+import { json } from 'body-parser';
 
-export class AutenticacionFederador {
+const IPSHost = 'https://testapp.hospitalitaliano.org.ar';
+export class SaludDigitalClient {
+    private expiresIn = 60 * 15 * 1000;  /* 15 min */
+    private issuer = 'http://neuquen.gob.ar';
+    // issuer = 'http://salud.sanjuan.gob.ar';
+    private token: string;
+    private host: string;
+    private dominio: string;
 
-    /**
-     *  TTL JWT Token
-     *  @var expiresIn {number}
-     *
-     * @memberOf Auth
-     */
-
-    static expiresIn = 60 * 15 * 1000;  /* 15 min */
-    static issuer = 'http://neuquen.gob.ar';
-    static audience = 'www.bussalud.gov.ar/auth/v1';
-    static subject = '202910';
-
-    /**
-        * Genera un token del federador
-        *
-        */
-    static generacionTokenAut(): any {
-        // Crea el token con los datos de sesión
-        const token = {
-            jti: 'qwertyuiopasdfghjklzxcvbnm123456',
-            name: 'Subsecretaria de salud',
-            role: 'Desarrollador',
-            ident: 'www.bussalud.gov.ar/usuarios|20182'
-        };
-        let t = jwt.sign(token, configPrivate.auth.jwtKey, { expiresIn: this.expiresIn, issuer: this.issuer, audience: this.audience, subject: this.subject });
-        console.log(t);
-        return t;
+    constructor(dominio, host) {
+        this.dominio = dominio;
+        this.host = host;
     }
 
-}
+    generacionTokenAut({ name, role, ident, sub }): any {
+        const payload = {
+            // jti: 'qwertyuiopasdfghjklzxcvbnm123457',
+            name,
+            role,
+            ident,
+            sub
+        };
+        return jwt.sign(payload, configPrivate.auth.jwtKeyFederador, {
+            expiresIn: this.expiresIn,
+            issuer: this.issuer,
+            audience: 'www.bussalud.gov.ar/auth/v1'
+        });
+    }
 
+    /**
+     * Obtención de token de autenticacion
+     */
+    async obtenerToken(payload) {
+        const token: any = this.generacionTokenAut(payload);
+        const url = `${this.host}/bus-auth/auth`;
+        const options = {
+            url,
+            method: 'POST',
+            json: true,
+            body: {
+                grantType: 'client_credentials',
+                scope: 'Patient/*.read,Patient/*.write',
+                clientAssertionType: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+                clientAssertion: token
+            },
+        };
+        const [status, body] = await handleHttpRequest(options);
+        const response = JSON.parse(body);
+        this.token = response.accessToken;
+        return this.token;
+
+    }
+
+    /**
+     * Valida un accessToken
+     */
+
+    async validarToken(token: any) {
+        const url = `${this.host}/bus-auth/tokeninfo`;
+        const options = {
+            url,
+            method: 'POST',
+            json: true,
+            body: {
+                accessToken: token
+            },
+        };
+        const [status, body] = await handleHttpRequest(options);
+        return status >= 200 && status <= 299;
+    }
+
+    async federar(patient: any) {
+        const url = `${this.host}/masterfile-federacion-service/fhir/Patient/`;
+        const options = {
+            url,
+            method: 'POST',
+            json: true,
+            body: patient,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        const [status, body] = await handleHttpRequest(options);
+        return status >= 200 && status <= 299;
+    }
+
+    async search(params: any) {
+        const url = `${this.host}/masterfile-federacion-service/fhir/Patient/`;
+        const options = {
+            url,
+            method: 'GET',
+            qs: params,
+            json: true,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        const [status, body] = await handleHttpRequest(options);
+        return (JSON.parse(body));
+    }
+
+    async getDominios(idPaciente) {
+        const url = `${this.host}/masterfile-federacion-service/fhir/Patient/$patient-location?identifier=${this.dominio}|${idPaciente}`;
+        const options = {
+            url,
+            method: 'GET',
+            headers: {
+                Authorization: ''
+            }
+        };
+
+        const [status, body] = await handleHttpRequest(options);
+        if (status >= 200 && status <= 300) {
+            const bundle = JSON.parse(body);
+            if (bundle.total > 0) {
+                const resp = bundle.entry.map((r) => {
+                    return {
+                        id: r.resource.id,
+                        name: r.resource.name,
+                        identifier: r.resource.identifier
+                    };
+                });
+                return resp;
+            }
+        }
+        return [];
+
+    }
+
+    async solicitud({ custodian, fechaDesde, fechaHasta, idPaciente, codeLoinc }) {
+        let url = `${this.host}/fhir/DocumentReference?subject:Patient.identifier=${this.dominio}|${idPaciente}&class=https://loinc.org/|${codeLoinc}`;
+        if (custodian) {
+            url += `&custodian=${custodian}`;
+        }
+        if (fechaDesde) {
+            url += `&date=ge${fechaDesde}`;
+        }
+        if (fechaHasta) {
+            url += `&date=le${fechaHasta}`;
+        }
+        const options = {
+            url,
+            method: 'GET',
+            headers: {
+                Authorization: ''
+            }
+        };
+
+        const [status, body] = await handleHttpRequest(options);
+        if (status >= 200 && status <= 300) {
+            const bundle = JSON.parse(body);
+            if (bundle.total > 0) {
+                const resp = bundle.entry.map((r) => {
+                    return {
+                        id: r.resource.id,
+                        identifier: r.resource.identifier,
+                        custodian: r.custodian,
+                        urlBinary: r.content[0].attachment.url
+                    };
+                });
+                return resp;
+            }
+        }
+        return [];
+
+    }
+    async getBinary(urlBinary) {
+        const url = `${urlBinary}`;
+        const options = {
+            url,
+            method: 'GET',
+            headers: {
+                Authorization: ''
+            }
+        };
+        const [status, body] = await handleHttpRequest(options);
+        if (status >= 200 && status <= 300) {
+            return JSON.parse(body);
+        }
+    }
+}
+/**
+ * IPS
+ *
+ * # Autenticacion
+ *  - [OK] Generar token
+ *  - [OK] Login
+ *  - [OK] Verificar token
+ *
+ * # Profesional
+ *  - [OK] Login
+ *  - Consulta si el paciente esta federado:
+ *      - NO: federa el paciente y guarda el id en identifier
+ *      - SI: nada
+ *  - [OK] Consulta dominios
+ *  - [OK]Consulta DocumentReference
+ *  - [OK]Descarga archivo Binary
+ *  - Visualización
+ *
+ *  # BUS DE INTEROPERABILIDAD
+ *   - Consulta DocumentReference por paciente
+ *   - Responder con un IPS Generado
+ */

@@ -1,6 +1,6 @@
 import * as express from 'express';
-import { IPS, getListaDominios } from '../controller/ips';
-
+import { IPS } from '../controller/ips';
+import { SaludDigitalClient } from '../controller/autenticacion';
 const router = express.Router();
 router.get('/:id', async (req, res, next) => {
     try {
@@ -13,7 +13,8 @@ router.get('/:id', async (req, res, next) => {
 
 router.get('/dominios/:id', async (req, res, next) => {
     try {
-        const bundle = await getListaDominios(req.params.id);
+        const saludDigital = new SaludDigitalClient(null, null);
+        const bundle = await saludDigital.getDominios(req.params.id);
         return res.json(bundle);
     } catch (err) {
         return next(err);

@@ -20,7 +20,7 @@ export function encode(patient) {
             });
         }
         identificadores.push({
-            system: 'http://app.andes.gob.ar/Patient',
+            system: 'http://neuquen.gob.ar/Patient',
             value: patient._id
         });
         // Parsea contactos

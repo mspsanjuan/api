@@ -5,12 +5,10 @@ import { Patient, Organization, Immunization, Condition, Composition, Bundle } f
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
 import { Types } from 'mongoose';
 import { handleHttpRequest } from '../../../utils/requestHandler';
-import { AutenticacionFederador } from '../../ips/controller/autenticacion';
+import { SaludDigitalClient } from '../../ips/controller/autenticacion';
 const request = require('request');
 
 const DOMAIN = 'http://neuquen.gob.ar';
-const IPSHost = 'https://testapp.hospitalitaliano.org.ar';
-
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
     if (paciente) {
@@ -105,55 +103,3 @@ const device = {
     ]
 };
 
-export async function getListaDominios(idPaciente) {
-    const url = `${IPSHost}/masterfile-federacion-service/fhir/Patient/$patient-location?identifier=${DOMAIN}|${idPaciente}`;
-    const options = {
-        url,
-        method: 'GET',
-        headers: {
-            Authorization: ''
-        }
-    };
-
-    const [status, body] = await handleHttpRequest(options);
-    if (status >= 200 && status <= 300) {
-        const bundle = JSON.parse(body);
-        if (bundle.total > 0) {
-            const resp = bundle.entry.map((r) => {
-                return {
-                    id: r.resource.id,
-                    name: r.resource.name,
-                    identifier: r.resource.identifier
-                };
-            });
-            return resp;
-        }
-    }
-    return [];
-
-}
-
-
-export function obtenerToken() {
-    const token: any = AutenticacionFederador.generacionTokenAut();
-    return new Promise((resolve: any, reject: any) => {
-        const url = `${IPSHost}/bus-auth/auth`;
-        const options = {
-            url,
-            method: 'POST',
-            json: true,
-            body: {
-                grantType: 'client_credentials',
-                scope: 'Patient/*.read,Patient/*.write',
-                clientAssertionType: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-                clientAssertion: token
-            },
-        };
-        request(options, (error, response, body) => {
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-                return resolve(body);
-            }
-            return resolve(error || body);
-        });
-    });
-}
