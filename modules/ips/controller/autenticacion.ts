@@ -1,11 +1,12 @@
 import * as configPrivate from '../../../config.private';
 import * as jwt from 'jsonwebtoken';
-import * as request from 'request';
 import { handleHttpRequest } from '../../../utils/requestHandler';
-import { json } from 'body-parser';
+
 
 const IPSHost = 'https://testapp.hospitalitaliano.org.ar';
 export class SaludDigitalClient {
+    static SystemPatient = 'https://federador.msal.gob.ar/patient-id';
+
     private expiresIn = 60 * 15 * 1000;  /* 15 min */
     private issuer = 'http://neuquen.gob.ar';
     // issuer = 'http://salud.sanjuan.gob.ar';
@@ -16,6 +17,10 @@ export class SaludDigitalClient {
     constructor(dominio, host) {
         this.dominio = dominio;
         this.host = host;
+    }
+
+    getDominio() {
+        return this.dominio;
     }
 
     generacionTokenAut({ name, role, ident, sub }): any {
@@ -101,8 +106,8 @@ export class SaludDigitalClient {
                 'Content-Type': 'application/json'
             }
         };
-        const [status, body] = await handleHttpRequest(options);
-        return (JSON.parse(body));
+        const [status, bundle] = await handleHttpRequest(options);
+        return (bundle.total > 0 ? bundle.entry.map(e => e.resource) : []);
     }
 
     async getDominios(idPaciente) {
@@ -114,27 +119,26 @@ export class SaludDigitalClient {
                 Authorization: ''
             }
         };
-
+        // https://bus.msal.gov.ar/dominios
         const [status, body] = await handleHttpRequest(options);
-        if (status >= 200 && status <= 300) {
+        if (status >= 200 && status <= 399) {
             const bundle = JSON.parse(body);
             if (bundle.total > 0) {
-                const resp = bundle.entry.map((r) => {
+                return bundle.entry.map((r) => {
                     return {
                         id: r.resource.id,
                         name: r.resource.name,
-                        identifier: r.resource.identifier
+                        identifier: r.resource.identifier.find(iden => iden.system === 'https://federador.msal.gob.ar/uri')
                     };
                 });
-                return resp;
             }
         }
         return [];
 
     }
 
-    async solicitud({ custodian, fechaDesde, fechaHasta, idPaciente, codeLoinc }) {
-        let url = `${this.host}/fhir/DocumentReference?subject:Patient.identifier=${this.dominio}|${idPaciente}&class=https://loinc.org/|${codeLoinc}`;
+    async solicitud({ custodian = null, fechaDesde = null, fechaHasta = null, patient, loinc }) {
+        let url = `${this.host}/fhir/DocumentReference?subject:Patient.identifier=${this.dominio}|${patient}&class=https://loinc.org/|${loinc}`;
         if (custodian) {
             url += `&custodian=${custodian}`;
         }
@@ -153,7 +157,7 @@ export class SaludDigitalClient {
         };
 
         const [status, body] = await handleHttpRequest(options);
-        if (status >= 200 && status <= 300) {
+        if (status >= 200 && status <= 399) {
             const bundle = JSON.parse(body);
             if (bundle.total > 0) {
                 const resp = bundle.entry.map((r) => {

@@ -7,8 +7,38 @@ import { Types } from 'mongoose';
 import { handleHttpRequest } from '../../../utils/requestHandler';
 import { SaludDigitalClient } from '../../ips/controller/autenticacion';
 const request = require('request');
-
+import { Auth } from './../../../auth/auth.class';
 const DOMAIN = 'http://neuquen.gob.ar';
+
+import { userScheduler } from '../../../config.private';
+export async function getPaciente(cliente: SaludDigitalClient, pacienteID) {
+    const { db, paciente } = await buscarPaciente(pacienteID);
+    if (paciente) {
+        const identificador = paciente.identificadores ? paciente.identificadores.find(i => i.entidad === SaludDigitalClient.SystemPatient) : null;
+        if (!identificador) {
+            const patientFhir = Patient.encode(paciente);
+            delete patientFhir['photo'];
+            await cliente.federar(patientFhir);
+            const results = await cliente.search({ identifier: `${cliente.getDominio()}|${paciente.id}` });
+            if (results.length > 0) {
+                const federadorPatient = results[0];
+                const ident = federadorPatient.identifier.find(i => i.system === SaludDigitalClient.SystemPatient);
+                if (!paciente.identificadores) {
+                    paciente.identificadores = [];
+                }
+                paciente.identificadores.push({
+                    entidad: SaludDigitalClient.SystemPatient,
+                    valor: ident.value
+                });
+                Auth.audit(paciente, (userScheduler as any));
+                await paciente.save();
+
+            }
+        }
+        return paciente;
+    }
+}
+
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
     if (paciente) {
