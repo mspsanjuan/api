@@ -1,16 +1,44 @@
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { getVacunas } from '../../vacunas/controller/VacunaController';
-import { getPrestaciones, filtrarRegistros } from './rup';
+import { getPrestaciones, filtrarRegistros } from '../../rup/controllers/rup';
 import { Patient, Organization, Immunization, Condition, Composition, Bundle } from '@andes/fhir';
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
 import { Types } from 'mongoose';
 import { handleHttpRequest } from '../../../utils/requestHandler';
+import { SaludDigitalClient } from '../../ips/controller/autenticacion';
 const request = require('request');
+import { Auth } from './../../../auth/auth.class';
+const DOMAIN = 'http://neuquen.gob.ar';
 
-const DOMAIN = 'http://www.neuquen.gov.ar';
-const IPSHost = 'https://testapp.hospitalitaliano.org.ar/masterfile-federacion-service/fhir/Patient';
+import { userScheduler } from '../../../config.private';
+export async function getPaciente(cliente: SaludDigitalClient, pacienteID) {
+    const { db, paciente } = await buscarPaciente(pacienteID);
+    if (paciente) {
+        const identificador = paciente.identificadores ? paciente.identificadores.find(i => i.entidad === SaludDigitalClient.SystemPatient) : null;
+        if (!identificador) {
+            const patientFhir = Patient.encode(paciente);
+            delete patientFhir['photo'];
+            await cliente.federar(patientFhir);
+            const results = await cliente.search({ identifier: `${cliente.getDominio()}|${paciente.id}` });
+            if (results.length > 0) {
+                const federadorPatient = results[0];
+                const ident = federadorPatient.identifier.find(i => i.system === SaludDigitalClient.SystemPatient);
+                if (!paciente.identificadores) {
+                    paciente.identificadores = [];
+                }
+                paciente.identificadores.push({
+                    entidad: SaludDigitalClient.SystemPatient,
+                    valor: ident.value
+                });
+                Auth.audit(paciente, (userScheduler as any));
+                await paciente.save();
 
-// [TODO] No repetir conceptos evolucionados!!!!
+                // [TODO] No repetir conceptos evolucionados!!!!
+                return paciente;
+            }
+        }
+    }
+}
 
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
@@ -106,30 +134,3 @@ const device = {
     ]
 };
 
-export async function getListaDominios(idPaciente) {
-    const url = `${IPSHost}/$patient-location?identifier=${DOMAIN}|${idPaciente}`;
-    const options = {
-        url,
-        method: 'GET',
-        headers: {
-            Authorization: ''
-        }
-    };
-
-    const [status, body] = await handleHttpRequest(options);
-    if (status >= 200 && status <= 300) {
-        const bundle = JSON.parse(body);
-        if (bundle.total > 0) {
-            const resp = bundle.entry.map((r) => {
-                return {
-                    id: r.resource.id,
-                    name: r.resource.name,
-                    identifier: r.resource.identifier
-                };
-            });
-            return resp;
-        }
-    }
-    return [];
-
-}

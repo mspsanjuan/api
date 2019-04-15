@@ -13,18 +13,19 @@ export function encode(patient) {
                 value: patient.documento
             });
         }
-        if (patient.cuil) {
-            identificadores.push({
-                system: 'http://www.renaper.gob.ar/cuil',
-                value: patient.cuil
-            });
-        }
+        // if (patient.cuil) {
+        //     identificadores.push({
+        //         system: 'http://www.renaper.gob.ar/cuil',
+        //         value: patient.cuil
+        //     });
+        // }
         identificadores.push({
-            system: 'http://app.andes.gob.ar/Patient',
+            // [TODO] Deshardcodear
+            system: 'http://neuquen.gob.ar',
             value: patient._id
         });
         // Parsea contactos
-        let contactos = patient.contacto ? patient.contacto.map(unContacto => {
+        let contactos = patient.contacto ? patient.contacto.filter(c => c.valor).map(unContacto => {
             let cont = {
                 resourceType: 'ContactPoint',
                 value: unContacto.valor,
@@ -44,7 +45,7 @@ export function encode(patient) {
             return cont;
         }) : [];
         // Parsea direcciones
-        let direcciones = patient.direccion ? patient.direccion.map(unaDireccion => {
+        let direcciones = patient.direccion ? patient.direccion.filter(dir => dir.ubicacion.localidad).map(unaDireccion => {
             let direc = {
                 resourceType: 'Address',
                 postalCode: unaDireccion.codigoPostal ? unaDireccion.codigoPostal : '',
@@ -81,22 +82,33 @@ export function encode(patient) {
                 genero = 'other';
                 break;
         }
-        let pacienteFHIR = {
+        let pacienteFHIR: any = {
             id: patient.id,
             resourceType: 'Patient',
             identifier: identificadores,
             active: patient.activo ? patient.activo : null, // Whether this patient's record is in active use
             name: [{
+                use: 'official',
                 resourceType: 'HumanName',
                 family: patient.apellido,
                 given: patient.nombre,
-                text: `${patient.nombre} ${patient.apellido}`
-                // [DONE] Confirmar si va el _family -> SI VA!!!!
+                text: `${patient.nombre} ${patient.apellido}`,
+                _family: {
+                    extension: [
+                        {
+                            url: 'http://hl7.org/fhir/StructureDefinition/humanname-fathers-family',
+                            valueString: patient.apellido
+                        },
+                    ]
+                },
+                // [TODO] Confirmar si va el _family
             }],
             gender: genero, // male | female | other | unknown
-            birthDate: patient.fechaNacimiento,
-            deceasedDateTime: patient.fechaFallecimiento ? patient.fechaFallecimiento : null,
+            birthDate: patient.fechaNacimiento.toISOString().slice(0, 10),
         };
+        if (patient.fechaFallecimiento) {
+            pacienteFHIR.deceasedDateTime = patient.fechaFallecimiento.toISOString().slice(0, 10);
+        }
         if (patient.estadoCivil) {
             let estadoCivil;
             switch (patient.estadoCivil) {
@@ -273,41 +285,15 @@ export function verify(patient) {
         respuesta = ('resourceType' in patient) && patient.resourceType === 'Patient';
         respuesta = respuesta && ('identifier' in patient);
         if (patient.identifier.length > 0) {
-            patient.identifier.forEach(anIdentifier => {
-                respuesta = respuesta && Object.keys(anIdentifier).every(identifierFields);
-                if (anIdentifier.assigner) {
-                    respuesta = respuesta && typeof anIdentifier.assigner === 'string';
-                }
-                if (anIdentifier.value) {
-                    respuesta = respuesta && typeof anIdentifier.value === 'string';
-                }
-            });
+            patient.identifier.forEach(anIdentifier => respuesta = respuesta && Object.keys(anIdentifier).every(identifierFields));
 
         }
-        patient.name.forEach(aName => {
-            respuesta = respuesta && validName(aName);
-        });
+        patient.name.forEach(aName => respuesta = respuesta && validName(aName));
         if (patient.active) {
             respuesta = respuesta && (typeof patient.active === 'boolean');
         }
         if (patient.telecom) {
-            patient.telecom.forEach(aTelecom => {
-                respuesta = respuesta && Object.keys(aTelecom).every(telecomFields);
-                respuesta = respuesta && ('resourceType' in aTelecom) && aTelecom.resourceType === 'ContactPoint';
-                if (aTelecom.value) {
-                    respuesta = respuesta && typeof aTelecom.value === 'string';
-                }
-                if (aTelecom.rank) {
-                    respuesta = respuesta && typeof aTelecom.rank === 'number';
-                }
-                if (aTelecom.system) {
-                    respuesta = respuesta && typeof aTelecom.system === 'string' &&
-                        aTelecom.system.match('phone|fax|email|pager|url|sms|other') != null;
-                }
-                if (aTelecom.use) {
-                    respuesta = respuesta && typeof aTelecom.use === 'string';
-                }
-            });
+            patient.telecom.forEach(aTelecom => respuesta = respuesta && Object.keys(aTelecom).every(telecomFields));
         }
         if (patient.gender) {
             respuesta = respuesta && patient.gender.match('male|female|other|unknown') != null;
@@ -319,24 +305,7 @@ export function verify(patient) {
             respuesta = respuesta && typeof patient.deceasedDateTime === 'string'; // TODO: Algun control de que tenga formato DateTime
         }
         if (patient.address) {
-            patient.address.forEach(anAddress => {
-                respuesta = respuesta && Object.keys(anAddress).every(addressFields);
-                if (anAddress.resourceType) {
-                    respuesta = respuesta && anAddress.resourceType === 'Address';
-                }
-                if (anAddress.postalCode) {
-                    respuesta = respuesta && typeof anAddress.postalCode === 'string';
-                }
-                if (anAddress.line) {
-                    respuesta = respuesta && anAddress.line.every(areStrings);
-                }
-                if (anAddress.city) {
-                    respuesta = respuesta && typeof anAddress.city === 'string';
-                }
-                if (anAddress.state) {
-                    respuesta = respuesta && typeof anAddress.state === 'string';
-                }
-            });
+            patient.address.forEach(anAddress => respuesta = respuesta && Object.keys(anAddress).every(addressFields));
         }
         if (patient.maritalStatus && patient.maritalStatus.text) {
             respuesta = respuesta && Object.keys(patient.maritalStatus).every(codingFields)
@@ -344,19 +313,12 @@ export function verify(patient) {
                 && patient.maritalStatus.text.match('Married|Divorced|Widowed|unmarried|unknown') != null;
         }
         if (patient.photo) {
-            patient.photo.forEach(aPhoto => {
-                respuesta = respuesta && Object.keys(aPhoto).every(photoFields);
-                if (aPhoto.data) {
-                    respuesta = respuesta && typeof aPhoto.data === 'string';
-                }
-            });
+            patient.photo.forEach(aPhoto => respuesta = respuesta && Object.keys(aPhoto).every(photoFields));
         }
         if (patient.contact) {
             patient.contact.forEach(aContact => {
                 if (aContact.relationship) {
-                    aContact.relationship.forEach(aRelation => {
-                        respuesta = respuesta && Object.keys(aRelation).every(codingFields);
-                    });
+                    aContact.relationship.forEach(aRelation => respuesta = respuesta && Object.keys(aRelation).every(codingFields));
                 }
                 if (aContact.name) {
                     respuesta = respuesta && validName(aContact.name);

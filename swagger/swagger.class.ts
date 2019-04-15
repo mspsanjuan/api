@@ -43,7 +43,7 @@ export class Swagger {
                 path.join(__dirname, './definitions.yml'),
                 // path.join(__dirname, '../core/term/routes/**/*.ts'),
                 path.join(__dirname, '../modules/cda/api-doc.yml'),
-                path.join(__dirname, '../fhir/api-doc.yml')
+                path.join(__dirname, '../connect/fhir/api-doc.yml')
                 // path.join(__dirname, '../core/mpi/api-doc.yml')
             ],
         });
