@@ -10,6 +10,7 @@
     "@andes/log": "^1.1.2",
     "@andes/match": "^1.1.12",
     "@andes/mongoose-plugin-audit": "file:packages/mongoose-plugin-audit",
+    "@andes/pacs-server": "file:packages/pacs-server",
     "@types/async": "^2.0.49",
     "@types/bcrypt-nodejs": "0.0.30",
     "@types/core-js": "^0.9.36",
