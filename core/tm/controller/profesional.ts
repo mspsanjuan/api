@@ -9,7 +9,8 @@ import { userScheduler } from '../../../config.private';
 import { Auth } from './../../../auth/auth.class';
 import { EventCore } from '@andes/event-bus';
 import { any } from 'async';
-
+const request = require('request');
+import { log } from '@andes/log';
 const PQueue = require('p-queue');
 /**
  * funcion que controla los vencimientos de la matriculas y de ser necesario envia sms y email avisando al profesional.
@@ -130,18 +131,32 @@ export async function formacionCero() {
 }
 
 export async function profesionalesToEconomia() {
-    console.log('esperando');
-    const queue = new PQueue({ concurrency: 2 });
-    let profesionales: any = await profesional.find({}).cursor({ batchSize: 50 });
-
-    await profesionales.eachAsync(async (unProf) => {
-        // const element = profesionales[index];
+    const queue = new PQueue({ concurrency: 1 });
+    let cont = 0;
+    let profesionales: any = await profesional.find({ profesionalMatriculado: true }).skip(0).cursor({ batchSize: 50 });
+    profesionales.eachAsync((unProf) => {
         queue.add(() => {
-            EventCore.emitAsync('matriculaciones:profesionales:create', unProf);
+            // EventCore.emitAsync('matriculaciones:profesionales:create', unProf);
+            return new Promise((resolve: any, reject: any) => {
+                const url = `http://mislicencias.economianqn.gob.ar/ml_backend/api-update/update-profesional`;
+                const options = {
+                    url,
+                    method: 'POST',
+                    json: true,
+                    body: {
+                        data: unProf
+                    }
+                };
+                request(options, (error, response, body) => {
+                    cont += 1;
+                    if (response.statusCode >= 200 && response.statusCode < 300) {
+                        log(request, 'profesionales', unProf.id, '/EXITO POST', unProf, body);
+                        return resolve(body);
+                    }
+                    log(request, 'profesionales', unProf.id, '/ERROR POST', error, body);
+                    return resolve(error || body);
+                });
+            });
         });
-
     });
-    console.log('termino');
-
-
 }

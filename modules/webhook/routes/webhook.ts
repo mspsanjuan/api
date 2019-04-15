@@ -80,10 +80,6 @@ EventCore.on(/.*/, async function (body) {
             json: true,
             timeout: 10000,
         }, (error, response, _body) => {
-            if (error) {
-
-                console.log('error', error, 'data', data.data.documento);
-            }
             let log = new WebHookLog({
                 event,
                 url: sub.url,
