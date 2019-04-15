@@ -4,6 +4,7 @@
   "description": "API para ANDES",
   "main": "index.js",
   "dependencies": {
+    "p-queue": "^3.0.0",
     "@andes/drive": "file:packages/drive",
     "@andes/event-bus": "file:packages/event-bus",
     "@andes/fhir": "file:packages/fhir",

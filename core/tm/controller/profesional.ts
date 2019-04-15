@@ -8,10 +8,13 @@ import * as turno from '../../../modules/matriculaciones/schemas/turno';
 import { userScheduler } from '../../../config.private';
 import { Auth } from './../../../auth/auth.class';
 import { EventCore } from '@andes/event-bus';
+import { any } from 'async';
 
+const PQueue = require('p-queue');
 /**
  * funcion que controla los vencimientos de la matriculas y de ser necesario envia sms y email avisando al profesional.
  */
+
 export async function vencimientoMatriculaGrado(done) {
     // let profesionales: any = await profesional.find({ 'formacionGrado.matriculado': true, profesionalMatriculado: true }, (data: any) => { return data; });
     let profesionales: any = await profesional.find({ 'formacionGrado.matriculacion.fin': { $lte: new Date() }, 'formacionGrado.matriculado': true, profesionalMatriculado: true });
@@ -128,10 +131,17 @@ export async function formacionCero() {
 
 export async function profesionalesToEconomia() {
     console.log('esperando');
-    let profesionales: any = await profesional.find({ documento: '4163905' }, (data: any) => { return data; });
-    for (let index = 0; index < profesionales.length; index++) {
-        const element = profesionales[index];
-        EventCore.emitAsync('matriculaciones:profesionales:create', elemen00t);
-        console.log(element, index);
-    }
+    const queue = new PQueue({ concurrency: 2 });
+    let profesionales: any = await profesional.find({}).cursor({ batchSize: 50 });
+
+    await profesionales.eachAsync(async (unProf) => {
+        // const element = profesionales[index];
+        queue.add(() => {
+            EventCore.emitAsync('matriculaciones:profesionales:create', unProf);
+        });
+
+    });
+    console.log('termino');
+
+
 }
