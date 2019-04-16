@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/dominios/:id', async (req, res, next) => {
     try {
         const saludDigital = new SaludDigitalClient(FHIR.domain, FHIR.ips_host, FHIR.secret);
-        //  const paciente = await getPacientew (saludDigital, req.params.id);
+        const paciente = await getPaciente(saludDigital, req.params.id);
         const bundle = await saludDigital.getDominios(req.params.id);
         return res.json(bundle);
     } catch (err) {
