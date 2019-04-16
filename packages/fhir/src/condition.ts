@@ -1,8 +1,9 @@
+import { makeUrl } from './config';
+
 /**
  *
  * @param registro Registro RUP a transformar a FHIR
  */
-
 
 
 export function encode(patientReference, registro) {

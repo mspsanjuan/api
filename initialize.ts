@@ -8,12 +8,15 @@ import { Connections } from './connections';
 import * as HttpStatus from 'http-status-codes';
 import { Express, Router } from 'express';
 import { AndesDrive } from '@andes/drive';
+import { initialize as FHIRInitialize } from '@andes/fhir';
 
 const requireDir = require('require-dir');
 
 export function initAPI(app: Express) {
     // Inicializa la autenticación con Passport/JWT
     Auth.initialize(app);
+
+    FHIRInitialize({ dominio: configPrivate.FHIR.domain });
 
     // Inicializa Mongoose
     Connections.initialize();

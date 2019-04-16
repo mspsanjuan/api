@@ -1,16 +1,13 @@
+import { Types } from 'mongoose';
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { getVacunas } from '../../vacunas/controller/VacunaController';
 import { getPrestaciones, filtrarRegistros } from '../../rup/controllers/rup';
-import { Patient, Organization, Immunization, Condition, Composition, Bundle } from '@andes/fhir';
+import { Patient, Organization, Immunization, Condition, Composition, Bundle, DocumentReference, Device } from '@andes/fhir';
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
-import { Types } from 'mongoose';
-import { handleHttpRequest } from '../../../utils/requestHandler';
 import { SaludDigitalClient } from '../../ips/controller/autenticacion';
-const request = require('request');
 import { Auth } from './../../../auth/auth.class';
-const DOMAIN = 'http://neuquen.gob.ar';
+import { userScheduler, hosts, FHIR } from '../../../config.private';
 
-import { userScheduler } from '../../../config.private';
 export async function getPaciente(cliente: SaludDigitalClient, pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
     if (paciente) {
@@ -40,6 +37,31 @@ export async function getPaciente(cliente: SaludDigitalClient, pacienteID) {
     }
 }
 
+export async function genDocumentReference(pacienteID) {
+    const { db, paciente } = await buscarPaciente(pacienteID);
+    if (paciente) {
+        const organizacion = await Organizacion.findOne({ 'codigo.sisa': 0 });
+        const FHIRDevice = Device.encode();
+        const FHIRCustodian = Organization.encode(organizacion);
+        const FHIRPatient = Patient.encode(paciente);
+        const binaryURL = `${hosts.main}/api/connect/fhir/Binary/${pacienteID}`;
+        const documentReferenceID = String(new Types.ObjectId());
+
+        const docRefFHIR = DocumentReference.encode(documentReferenceID, FHIRDevice, FHIRCustodian, FHIRPatient, binaryURL);
+
+        const BundleID = String(new Types.ObjectId());
+        const FHIRBundle = Bundle.encode(BundleID, [
+            createResource(docRefFHIR),
+            createResource(FHIRPatient),
+            createResource(FHIRDevice),
+            createResource(FHIRCustodian)
+        ]);
+
+        return FHIRBundle;
+    }
+    return null;
+}
+
 export async function IPS(pacienteID) {
     const { db, paciente } = await buscarPaciente(pacienteID);
     if (paciente) {
@@ -52,7 +74,7 @@ export async function IPS(pacienteID) {
 
         // Armar documento
         const FHIRPatient = Patient.encode(paciente);
-        const FHIRDevice = device; // [TODO] ver que hacer
+        const FHIRDevice = Device.encode(); // [TODO] ver que hacer
         const FHIRCustodian = Organization.encode(organizacion);
 
         const FHIRImmunization = vacunas.map((vacuna) => {
@@ -84,53 +106,13 @@ export async function IPS(pacienteID) {
 }
 
 function fullurl(resource) {
-    return `http://hapi.fhir.org/baseR4/${resource.resourceType}/${resource.id}`;
+    return `${FHIR.domain}/${resource.resourceType}/${resource.id}`;
 }
 
-
-function getReference(resource) {
-    return {
-        reference: fullurl(resource)
-    };
-}
 function createResource(resource) {
     return {
         fullUrl: fullurl(resource),
         resource
     };
 }
-
-
-/**
- * HARDCODE DEVICE
- */
-
-const device = {
-    resourceType: 'Device',
-    id: 'device-01',
-    identifier: [
-        {
-            system: `${DOMAIN}/Device`,
-            value: 'device-01'
-        }
-    ],
-    type: {
-        coding: [
-            {
-                system: 'http://snomed.info/sct',
-                code: '462894001',
-                display: 'software de aplicación de sistema de información de historias clínicas de pacientes (objeto físico)'
-            }
-        ]
-    },
-    owner: {
-        reference: 'http://argentina.gob.ar/salud/refes/14999912399913'
-    },
-    deviceName: [
-        {
-            name: 'Sistema de Aplicaciones Neuquinas de Salud (ANDES)',
-            type: 'manufacturer-name'
-        }
-    ]
-};
 

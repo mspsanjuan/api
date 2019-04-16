@@ -1,3 +1,5 @@
+import { getDominio, makeUrl } from './config';
+
 /**
  * Encode a practitioner from ANDES to FHIR
  * @param {} practitioner
@@ -6,7 +8,7 @@ export function encode(practitioner) {
     let data = practitioner;
     if (data) {
         let identificadores = data.documento ? [{
-            system: 'DU',
+            system: 'http://www.renaper.gob.ar/dni',
             value: data.documento
         }] : [];
         if (data.cuil) {
@@ -16,7 +18,7 @@ export function encode(practitioner) {
             });
         }
         identificadores.push({
-            system: 'andes',
+            system: getDominio(),
             value: data._id
         });
         // Parsea contactos

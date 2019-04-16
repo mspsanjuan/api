@@ -7,7 +7,7 @@ import { Organization } from '@andes/fhir';
 // Schemas
 const router = express.Router();
 
-router.get('/organization/([\$])match', async (req, res, next) => {
+router.get('/organization/([\$])match', Auth.authenticate(), async (req, res, next) => {
     if (!Auth.check(req, 'fhir:organization:match')) {
         return next(codes.status.unauthorized);
     }

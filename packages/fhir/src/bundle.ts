@@ -1,4 +1,5 @@
 import * as moment from 'moment';
+import { makeUrl } from './config';
 
 export function encode(ID, resources) {
     return {
@@ -11,7 +12,7 @@ export function encode(ID, resources) {
         entry : resources,
         type : 'document',
         identifier : {
-            system : 'http://andes.gob.ar/Bundle',
+            system : makeUrl('Bundle'),
             value : ID
         }
     };
