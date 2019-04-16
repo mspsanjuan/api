@@ -7,7 +7,7 @@ import { Practitioner } from '@andes/fhir';
 // Schemas
 const router = express.Router();
 
-router.get('/practitioner/([\$])match', async (req, res, next) => {
+router.get('/practitioner/([\$])match', Auth.authenticate(), async (req, res, next) => {
     if (!Auth.check(req, 'fhir:practitioner:match')) {
         return next(codes.status.unauthorized);
     }

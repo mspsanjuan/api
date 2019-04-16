@@ -134,7 +134,7 @@ export const modules = {
         active: true,
         path: './connect/fhir/routes',
         route: '/connect/fhir',
-        middleware: appMiddleware
+        // middleware: appMiddleware
     },
     cda: {
         active: true,

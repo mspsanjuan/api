@@ -1,5 +1,6 @@
 
 import * as moment from 'moment';
+import { makeUrl } from './config';
 
 function getReference(url) {
     return {
@@ -81,8 +82,8 @@ export function encode(ID, patientReference, custodianReference, deviceReference
         },
         title : 'Resumen del paciente al ' + now.format('DD [de] MMMM [de] YYYY, HH:mm'),
         identifier : {
-            system : 'http://hospitalPintos.org.ar/Composition',
-            value : '10501'
+            system : makeUrl('Composition'),
+            value : ID
         },
         date : now,
         meta : {

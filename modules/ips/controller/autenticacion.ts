@@ -1,22 +1,19 @@
-import * as configPrivate from '../../../config.private';
 import * as jwt from 'jsonwebtoken';
 import { handleHttpRequest } from '../../../utils/requestHandler';
 
-
-const IPSHost = 'https://testapp.hospitalitaliano.org.ar';
 export class SaludDigitalClient {
     static SystemPatient = 'https://federador.msal.gob.ar/patient-id';
 
     private expiresIn = 60 * 15 * 1000;  /* 15 min */
-    private issuer = 'http://neuquen.gob.ar';
-    // issuer = 'http://salud.sanjuan.gob.ar';
     private token: string;
     private host: string;
     private dominio: string;
+    private secret: string;
 
-    constructor(dominio, host) {
+    constructor(dominio, host, secret) {
         this.dominio = dominio;
         this.host = host;
+        this.secret = secret;
     }
 
     getDominio() {
@@ -31,9 +28,9 @@ export class SaludDigitalClient {
             ident,
             sub
         };
-        return jwt.sign(payload, configPrivate.auth.jwtKeyFederador, {
+        return jwt.sign(payload, this.secret, {
             expiresIn: this.expiresIn,
-            issuer: this.issuer,
+            issuer: this.dominio,
             audience: 'www.bussalud.gov.ar/auth/v1'
         });
     }

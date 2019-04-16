@@ -1,3 +1,5 @@
+import { getDominio, makeUrl } from './config';
+
 /**
  * Encode a organization from ANDES to FHIR
  * @param {} organization
@@ -5,7 +7,7 @@
 export function encode(organization) {
     let data = organization;
     if (data) {
-        let identificadores = data.codigo.sisa ? [{
+        let identificadores: any[] = data.codigo.sisa ? [{
             assigner: 'sisa',
             value: data.codigo.sisa
         }] : [];
@@ -28,7 +30,7 @@ export function encode(organization) {
             });
         }
         identificadores.push({
-            assigner: 'andes',
+            system: makeUrl('Organization'),
             value: data._id
         });
 

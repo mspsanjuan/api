@@ -1,4 +1,6 @@
 
+import { getDominio, makeUrl } from './config';
+
 /**
  * Encode a patient from ANDES to FHIR
  * @param {} patient
@@ -20,8 +22,7 @@ export function encode(patient) {
         //     });
         // }
         identificadores.push({
-            // [TODO] Deshardcodear
-            system: 'http://neuquen.gob.ar',
+            system: getDominio(),
             value: patient._id
         });
         // Parsea contactos
@@ -181,7 +182,7 @@ export function decode(patient) {
         }
     }
     let pacienteAndes = {
-        id: getValue(patient.identifier, 'http://app.andes.gob.ar/Patient'),
+        id: getValue(patient.identifier, makeUrl('Patient')),
         documento: getValue(patient.identifier, 'http://www.renaper.gob.ar/dni'),
         nombre: patient.name[0].given.join().replace(',', ' '),
         apellido: patient.name[0].family.join().replace(',', ' '),
