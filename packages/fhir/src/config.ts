@@ -1,7 +1,7 @@
 let DOMINIO = '';
 
 export function initialize({ dominio }) {
-    dominio = dominio;
+    DOMINIO = dominio;
 }
 
 export function getDominio() {
@@ -13,4 +13,5 @@ export function makeUrl(resource, id = null) {
     if (id) {
         url += `/${id}`;
     }
+    return url;
 }
