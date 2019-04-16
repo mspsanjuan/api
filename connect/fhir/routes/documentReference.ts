@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/DocumentReference', async (req, res, next) => {
     try {
         // [TODO] Verificar el domain
-        const subject: String = req.query['subject:Patient.identifier'];
+        const subject: String = req.query['subject:identifier'];
         const [domain, id] = subject.split('|');
         const bundle = await genDocumentReference(id);
         return res.json(bundle);

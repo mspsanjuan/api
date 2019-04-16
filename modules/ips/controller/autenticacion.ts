@@ -135,7 +135,7 @@ export class SaludDigitalClient {
     }
 
     async solicitud({ custodian = null, fechaDesde = null, fechaHasta = null, patient, loinc }) {
-        let url = `${this.host}/fhir/DocumentReference?subject:Patient.identifier=${this.dominio}|${patient}&class=https://loinc.org/|${loinc}`;
+        let url = `${this.host}/fhir/DocumentReference?subject:identifier=${this.dominio}|${patient}&class=https://loinc.org/|${loinc}`;
         if (custodian) {
             url += `&custodian=${custodian}`;
         }
