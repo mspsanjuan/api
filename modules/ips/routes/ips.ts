@@ -27,5 +27,15 @@ router.get('/document/:id', async (req, res, next) => {
     }
 });
 
+router.get('/binary:url', async (req, res, next) => {
+    try {
+        const saludDigital = new SaludDigitalClient(FHIR.domain, FHIR.ips_host, FHIR.secret);
+        const urlBinary = req.params.urlBinary;
+        const bundle = await saludDigital.getBinary(urlBinary);
+        return res.json(bundle);
+    } catch (err) {
+        return next(err);
+    }
+});
 export = router;
 
