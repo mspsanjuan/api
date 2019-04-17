@@ -11,7 +11,8 @@ import { getResultadosAnteriores,
     getProtocoloByNumero,
     getProtocolos,
     generarNumeroProtocolo,
-    actualizarRegistrosEjecucion
+    actualizarRegistrosEjecucion,
+    getProtocoloByTurno
 } from '../controller/protocolo';
 import { Types } from 'mongoose';
 
@@ -39,7 +40,7 @@ router.post('/protocolos/', async (req, res, next) => {
 
 router.get('/protocolos/', async (req, res, next) => {
     try {
-        let data: any = await getProtocolos(req.query);
+        let data: any = req.query.turnos ? await getProtocoloByTurno(req.query) : await getProtocolos(req.query);
         if (data) {
             res.json(data);
         } else {
@@ -141,36 +142,29 @@ router.get('/protocolos/:id', async (req, res, next) => {
     }
 });
 
-router.patch('/protocolos/ejecuciones/registros/:id', async (req, res, next) => {
-    try {
-        Prestacion.updateOne(
-            {
-                _id: req.params.id,
-                'ejecucion.registros.concepto.conceptId': req.body.registros[0].conceptId
-            },
-            {
-                $set: {
-                    'ejecucion.registros.$.valor.resultado.valor': req.body.registros[0].valor
-                },
-                $push: {
-                    'ejecucion.registros.$.valor.estados': req.body.registros[0].estado
-                }
-            },
-            (err, data: any) => {
-                if (err) {
-                    return next(err);
-                }
-                return res.json(data);
-            }
-        );
-    } catch (err) {
-        return next(err);
-    }
-});
-
 router.patch('/protocolos/ejecuciones/registros', async (req, res, next) => {
+    res.json(null);
     try {
-        res.json(await actualizarRegistrosEjecucion(req));
+        const asignarNumero = req.body.asignarNumero;
+
+        if (asignarNumero) {
+            const numero = await generarNumeroProtocolo(req.body.organizacion.id);
+            await Prestacion.updateOne(
+                { _id: { _id: Types.ObjectId(req.body.idProtocolo) } },
+                {
+                    $set: { 
+                        'solicitud.registros.0.valor.solicitudPrestacion.numeroProtocolo': numero,
+                        'ejecucion.registros': req.body.registros,
+                        'ejecucion.fecha': new Date()
+                    },
+                },
+                (err, data: any) => { return next(err); }
+            );
+
+        } else {
+            res.json(await actualizarRegistrosEjecucion(req));
+        }
+
     } catch (e) {
         return next(e);
     }

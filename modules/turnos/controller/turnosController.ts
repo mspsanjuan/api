@@ -147,7 +147,6 @@ export async function getHistorialPaciente(req) {
             const turnos = [];
             let turno;
 
-
             let match = req.query.tipoPrestacion ? {
                 $and: [
                     { 'bloques.turnos.paciente.id': { $in: paciente.vinculos } },

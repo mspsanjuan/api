@@ -75,6 +75,7 @@ const lookupResultadoAnterior = {
     }
 };
 
+
 /**
  *
  *
@@ -631,3 +632,25 @@ export async function actualizarEstadoDerivadoRegistrosEjecucion(ids, _usuario, 
     });
     return await Promise.all(promises);
 }
+
+
+/**
+ *
+ *
+ * @param {*} params
+ * @returns
+ */
+export async function getProtocoloByTurno(params) {
+
+    let conditions = [];
+
+    conditions.push({ $match: { 'solicitud.tipoPrestacion.conceptId': '15220000' } });
+    conditions.push({ $match: { 'solicitud.turno': Types.ObjectId(params.turnos) }});
+
+    let prestaciones = await Prestacion.aggregate(conditions).allowDiskUse(true).exec();
+
+
+    cargarInformacionResultado(prestaciones);
+    return prestaciones;
+}
+
