@@ -15,6 +15,8 @@ export async function getPaciente(cliente: SaludDigitalClient, pacienteID) {
         if (!identificador) {
             const patientFhir = Patient.encode(paciente);
             delete patientFhir['photo'];
+            delete patientFhir['address'];
+            delete patientFhir['contact'];
             await cliente.federar(patientFhir);
             const results = await cliente.search({ identifier: `${cliente.getDominio()}|${paciente.id}` });
             if (results.length > 0) {
