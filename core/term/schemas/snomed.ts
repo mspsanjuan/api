@@ -31,6 +31,8 @@ export let SnomedSchema = new mongoose.Schema({
     isLeafInferred: Boolean,
     isLeafStated: Boolean,
     active: Boolean,
+    inferredAncestors: [String],
+    statedAncestors: [String],
     memberships: [{
         _id: false,
         refset: {

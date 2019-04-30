@@ -7,6 +7,84 @@ import { iterate, convertToObjectId } from '../controllers/rup';
 import { AuditPlugin } from '@andes/mongoose-plugin-audit';
 import { financiadorSchema } from '../../../core/mpi/schemas/financiador';
 
+export const PrestacionesTxSchema = new mongoose.Schema({
+    prestacionId: mongoose.Schema.Types.ObjectId,
+    paciente: {
+        // requirido, validar en middleware
+        id: mongoose.Schema.Types.ObjectId,
+        nombre: String,
+        apellido: String,
+        documento: String,
+        telefono: String,
+        sexo: String,
+        fechaNacimiento: Date,
+        obraSocial: financiadorSchema,
+        edad: Number,
+    },
+    fecha: {
+        ejecucion: Date,
+        validacion: Date,
+    },
+    tipoPrestacion: {
+        id: mongoose.Schema.Types.ObjectId,
+        conceptId: String,
+        term: String,
+        fsn: String,
+        semanticTag: SemanticTag,
+        refsetIds: [String],
+        noNominalizada: Boolean
+    },
+    organizacion: {
+        id: mongoose.Schema.Types.ObjectId,
+        nombre: String
+    },
+    profesional: {
+        id: mongoose.Schema.Types.ObjectId,
+        nombre: String,
+        apellido: String,
+        documento: String
+    },
+    esPrestacion: Boolean,
+    registroId: mongoose.Schema.Types.ObjectId,
+    concepto: {
+        conceptId: String,
+        term: String,
+        fsn: String,
+        semanticTag: SemanticTag,
+        refsetIds: [String],
+        // Campos para facilitar la busqueda.
+        inferredAncestors: [String],
+        statedAncestors: [String],
+        relationships: [{
+            _id: false,
+            active: Boolean,
+            type: {
+                type: {
+                    conceptId: String,
+                    preferredTerm: String
+                }
+            },
+            destination: {
+                conceptId: String,
+                fullySpecifiedName: String,
+                preferredTerm: String,
+            },
+            characteristicType: {
+                conceptId: String,
+                preferredTerm: String
+            },
+            targetInferredAncestors: [String],
+            targetStatedAncestors: [String]
+        }],
+    },
+    valor: mongoose.Schema.Types.Mixed,
+    valorType: String,
+    ancestorsId: [mongoose.Schema.Types.ObjectId],
+    ancestorsSctId: [String]
+});
+export let PrestacionTx = mongoose.model('prestaciontx', PrestacionesTxSchema, 'prestacionesTx');
+
+
 export let schema = new mongoose.Schema({
     // Datos principales del paciente
     paciente: {
