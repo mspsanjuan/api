@@ -138,7 +138,7 @@ export async function profesionalesToEconomia() {
         queue.add(() => {
             // EventCore.emitAsync('matriculaciones:profesionales:create', unProf);
             return new Promise((resolve: any, reject: any) => {
-                const url = `http://mislicencias.economianqn.gob.ar/ml_backend/api-update/update-profesional`;
+                const url = `https://mislicencias.economianqn.gob.ar/ml_backend/api-update/update-profesional`;
                 const options = {
                     url,
                     method: 'POST',
