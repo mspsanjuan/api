@@ -1,3 +1,5 @@
+
+
 import {Paciente, PacienteMpi} from '../schemas/paciente';
 import * as mongoose from 'mongoose';
 import * as express from 'express';
@@ -7,9 +9,17 @@ import { ElasticSync } from '../../../utils/elasticSync';
 import { log } from '@andes/log';
 import { logKeys } from '../../../config';
 import { EventCore } from '@andes/event-bus';
+import { IPaciente, IPacienteDoc } from '../interfaces/Paciente.interface';
+
+/**
+ * Persiste un nuevo paciente en la base de datos ANDES y los sincroniza con ElasticSearch.
+ *
+ * @param {IPaciente} body Datos del paciente
+ * @param {express.Request} req Request de Express para obtener los datos del usuario
+ */
 
 
-export async function createPaciente(body, req) {
+export async function createPaciente(body: IPaciente, req) {
     const session = await Paciente.db.startSession();
     try {
         session.startTransaction();
@@ -30,7 +40,15 @@ export async function createPaciente(body, req) {
     }
 }
 
-export async function updatePaciente(paciente, req: express.Request) {
+/**
+ * Actualiza un paciente existente. Si esta en MPI, lo crea en ANDES. Sino lo actualiza.
+ * Sincroniza con ElasticSearch si es necesario.
+ *
+ * @param {IPaciente} body Datos del paciente
+ * @param {express.Request} req Request de Express para obtener los datos del usuario
+ */
+
+export async function updatePaciente(paciente: IPacienteDoc, req: express.Request) {
     const session = await Paciente.db.startSession();
     session.startTransaction();
     try {
@@ -53,17 +71,34 @@ export async function updatePaciente(paciente, req: express.Request) {
         session.abortTransaction();
         throw error;
     }
-
 }
 
-export async function findById(id: string | String | mongoose.Types.ObjectId) {
-    let base = 'andes';
+type DatabaseType = 'andes' | 'mpi';
+
+/**
+ * @typedef {Promise} IFindById
+ * @prop {String} db - Base de datos donde pertenece el paciente
+ * @prop {String} paciente - Objecto paciente
+ */
+
+type IFindById = Promise<{
+    db: DatabaseType,
+    paciente: IPacienteDoc
+}>;
+
+/**
+ * Busca un paciente por ID. Tanto en ANDES y MPI.
+ * @returns {IFindById}
+ */
+
+export async function findById(id: string | String | mongoose.Types.ObjectId): IFindById {
+    let base: DatabaseType = 'andes';
     let paciente = await Paciente.findById(id);
     if (!paciente) {
         base = 'mpi';
         paciente = await PacienteMpi.findById(id);
         if (!paciente) {
-            base = '';
+            return null;
         }
     }
 
