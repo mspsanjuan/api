@@ -8,16 +8,17 @@ import { log } from '@andes/log';
 import { logKeys } from '../../../config';
 import { EventCore } from '@andes/event-bus';
 
-export async function createPaciente(body, req: express.Request) {
-    const session = await Connections.main.startSession();
-    session.startTransaction();
+
+export async function createPaciente(body, req) {
+    const session = await Paciente.db.startSession();
     try {
-        const paciente = new Paciente(body);
+        session.startTransaction();
+        const paciente = new Paciente();
+        paciente.set(body);
         Auth.audit(paciente, req);
         await paciente.save({ session});
-
         const connElastic = new ElasticSync();
-        await connElastic.create(paciente._id.toString(), (paciente as any).toElastic());
+        await connElastic.create(String(paciente._id), (paciente as any).toElastic());
         log(req, logKeys.mpiInsert.key, paciente._id, logKeys.mpiInsert.operacion, paciente, null);
         await session.commitTransaction();
         EventCore.emitAsync('mpi:patient:create', paciente);
@@ -30,20 +31,22 @@ export async function createPaciente(body, req: express.Request) {
 }
 
 export async function updatePaciente(paciente, req: express.Request) {
-    const session = await Connections.main.startSession();
+    const session = await Paciente.db.startSession();
     session.startTransaction();
     try {
+
         const pacienteOriginal = paciente.toObject();
         const pacienteFields = paciente.modifiedPaths();
         Auth.audit(paciente, req);
         await paciente.save({ session});
-        if (paciente.sincroniza(pacienteFields)) {
+        if (paciente.sincroniza()) {
             const connElastic = new ElasticSync();
             await connElastic._sync(paciente.id, paciente);
         }
         EventCore.emitAsync('mpi:patient:update', paciente, pacienteFields);
         log(req, logKeys.mpiUpdate.key, paciente._id, logKeys.mpiUpdate.operacion, paciente, pacienteOriginal);
-        session.commitTransaction();
+        await session.commitTransaction();
+        return paciente;
 
     } catch (error) {
         log(req, logKeys.mpiUpdate.key, req.body._id, logKeys.mpiUpdate.operacion, null, 'Error actualizando paciente');
@@ -59,7 +62,11 @@ export async function findById(id: string | String | mongoose.Types.ObjectId) {
     if (!paciente) {
         base = 'mpi';
         paciente = await PacienteMpi.findById(id);
+        if (!paciente) {
+            base = '';
+        }
     }
+
     const resultado = {
         db: base,
         paciente

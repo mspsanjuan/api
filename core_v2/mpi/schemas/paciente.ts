@@ -195,8 +195,10 @@ PacienteSchema.methods.basicos = function () {
     };
 };
 
-PacienteSchema.methods.sincroniza = function (fields: string[]) {
-    return fields.some(f => (elasticFields.indexOf(f) >= 0));
+PacienteSchema.methods.sincroniza = function () {
+    if (this.modifiedPaths()) {
+        return this.modifiedPaths().some(f => (elasticFields.indexOf(f) >= 0));
+    }
 };
 
 PacienteSchema.methods.toElastic = function () {
