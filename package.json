@@ -11,7 +11,7 @@
     "@andes/log": "^1.1.5",
     "@andes/match": "^1.1.12",
     "@andes/mongoose-plugin-audit": "file:packages/mongoose-plugin-audit",
-    "@elastic/elasticsearch": "^5.6.16",
+    "@elastic/elasticsearch": "^5.6.17",
     "@types/async": "^2.0.49",
     "@types/bcrypt-nodejs": "0.0.30",
     "@types/core-js": "^0.9.36",
@@ -94,7 +94,7 @@
     "tsc": "tsc",
     "tsc:w": "tsc -w",
     "jobs": "tsc && node jobs/scheduler.js",
-    "test": "(npm run tsc || true) && NODE_ENV=TEST npx ts-mocha -r mocha.config.ts core_v2/**/*.spec.ts",
+    "test": "npm run tsc && NODE_ENV=TEST npx ts-mocha -r mocha.config.ts core_v2/**/*.spec.ts",
     "lint": "tslint --project .",
     "lint:fix": "tslint --project . --fix",
     "parse": "apg -i core/term/controller/grammar/Expression-ABNF.txt -o core/term/controller/grammar/grammar.js"
