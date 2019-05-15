@@ -74,4 +74,18 @@ router.post('/constanciaPuco/:tipo?', (req: any, res, next) => {
     });
 });
 
+router.post('/planIndicacion/:tipo?', Auth.authenticate(), (req: any, res, next) => {
+    Documento.descargarPlanIndicacion(req, res, next).then(archivo => {
+        res.download((archivo as string), (err) => {
+            if (err) {
+                next(err);
+            } else {
+                next();
+            }
+        });
+    }).catch(e => {
+        return next(e);
+    });
+});
+
 export = router;
