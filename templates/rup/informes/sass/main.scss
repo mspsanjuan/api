@@ -265,10 +265,11 @@ footer {
     float: right;
     margin-bottom: 0.5cm;
     text-align: center;
-
+ 
     >.contenedor-bloque-texto {
         &:first-child {
             margin-right: 5rem;
+            padding: 50px;
         }
     }
 
