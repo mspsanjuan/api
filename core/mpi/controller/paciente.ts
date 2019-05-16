@@ -17,7 +17,6 @@ import * as Barrio from '../../tm/schemas/barrio';
 import { log as andesLog } from '@andes/log';
 import { logKeys } from '../../../config';
 import * as mongoose from 'mongoose';
-import { nextTick } from 'async';
 
 /**
  * Crea un paciente y lo sincroniza con elastic
