@@ -403,6 +403,7 @@ export class Documento {
 
                     let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
                     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
+
                     await this.generarInforme(registros);
 
 
@@ -677,4 +678,175 @@ export class Documento {
             }
         });
     }
+
+    static descargarPlanIndicacion(req, res, next, options = null) {
+        return new Promise((resolve, reject) => {
+            switch (req.params.tipo) {
+                case 'pdf':
+                    // PhantomJS PDF rendering options
+                    // https://www.npmjs.com/package/html-pdf
+                    // http://phantomjs.org/api/webpage/property/paper-size.html
+                    let phantomPDFOptions: pdf.CreateOptions = {
+                        format: 'A4',
+                        border: {
+                            // default is 0, units: mm, cm, in, px
+                            top: '.25cm',
+                            right: '0cm',
+                            bottom: '3cm',
+                            left: '0cm'
+                        },
+                        header: {
+                            height: '5.75cm',
+                        },
+                        footer: {
+                            height: '1cm',
+                            contents: {}
+                        }
+                    };
+
+                    this.options = options || phantomPDFOptions;
+
+                    this.generarPlanIndicacionHTML(req).then(htmlPDF => {
+                        htmlPDF = htmlPDF + this.generarCSS();
+                        pdf.create(htmlPDF, this.options).toFile((err2, file): any => {
+                            if (err2) {
+                                reject(err2);
+                            }
+                            resolve(file.filename);
+                        });
+                    });
+                    break;
+            }
+        });
+    }
+
+    private static async generarPlanIndicacionHTML(req) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Prestación
+                let prestacion: any = await this.getPrestacionData(req.body.idPrestacion);
+
+                // Configuraciones de informe propios de la prestación
+                let config: any = await this.getPrestacionInformeParams(prestacion.solicitud.tipoPrestacion.conceptId);
+
+                if (!config) {
+                    config = await this.getPrestacionInformeComponent(prestacion.solicitud.tipoPrestacion.conceptId);
+                }
+
+                // Se crea un objecto nuevo
+                config = JSON.parse(JSON.stringify(config));
+
+                // Paciente
+                let mpi: any = await Paciente.buscarPaciente(prestacion.paciente.id);
+                let paciente = mpi.paciente;
+
+                if (paciente.id && config) {
+                    let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+                    // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
+
+                    let html = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/html/planIndicacion.html'), 'utf8');
+
+                    // Datos paciente
+                    let nombreCompleto = paciente.apellido + ', ' + paciente.nombre;
+                    let hoy = moment();
+                    let edad = paciente.fechaNacimiento ? hoy.diff(moment(paciente.fechaNacimiento), 'years') + ' años | ' : '';
+                    let datosRapidosPaciente = paciente.sexo + ' | ' + edad + paciente.documento;
+                    let fechaNacimiento = paciente.fechaNacimiento ? moment(paciente.fechaNacimiento).format('DD/MM/YYYY') : 's/d';
+                    let carpeta = paciente.carpetaEfectores.find(x => x.organizacion.id === idOrg);
+
+                    // Datos origen solicitud
+                    let idOrg = (Auth.getOrganization(req, 'id') as any);
+                    let organizacion: any = await this.getOrgById(idOrg);
+                    let orgacionacionDireccionSolicitud = organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre;
+
+                    // Datos profesional
+                    let profesionalSolicitud = prestacion.solicitud.profesional.apellido + ', ' + prestacion.solicitud.profesional.nombre;
+                    let profesionalValidacion = prestacion.updatedBy ? prestacion.updatedBy.nombreCompleto : prestacion.createdBy.nombreCompleto;
+
+                    // HEADER
+                    html = html
+                        .replace('<!--paciente-->', nombreCompleto)
+                        .replace('<!--datosRapidosPaciente-->', datosRapidosPaciente)
+                        .replace('<!--fechaNacimiento-->', fechaNacimiento)
+                        .replace('<!--nroCarpeta-->', (carpeta && carpeta.nroCarpeta ? carpeta.nroCarpeta : 'sin número de carpeta'))
+                        .replace(/(<!--organizacionNombreSolicitud-->)/g, prestacion.solicitud.organizacion.nombre.replace(' - ', '<br>'))
+                        .replace('<!--orgacionacionDireccionSolicitud-->', orgacionacionDireccionSolicitud)
+                        .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY'))
+                        .replace('<!--profesionalSolicitud-->', profesionalSolicitud);
+
+                    let tipoPrestacion = prestacion.solicitud.tipoPrestacion.term[0].toUpperCase() + prestacion.solicitud.tipoPrestacion.term.slice(1);
+                    let fechaEjecucion = new Date(prestacion.estados.find(x => x.tipo === 'ejecucion').createdAt);
+                    let fechaValidacion = new Date(prestacion.estados.find(x => x.tipo === 'validada').createdAt);
+
+
+                    // BODY
+                    html = html
+                        .replace('<!--tipoPrestacion-->', tipoPrestacion)
+                        .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--fechaEjecucion-->', moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs');
+
+                    // vamos a armar la tabla con los datos de las indicaciones
+
+                    let filas = '';
+                    for (let i = 0; i < registros.length; i++) {
+                        let reg = registros[i].registros;
+                        filas += `<tr>
+                         <td>${reg[0].valor}</td>
+                           <td>${reg[1].valor ? reg[1].valor.nombre : ''}</td>
+                         <td>${reg[2].valor ? reg[2].valor.nombre : ''}</td>
+                        <td>${reg[3].valor ? (reg[3].valor.estado ? reg[3].valor.estado : 'activo') : 'activo'}</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+                    }
+
+                    html = html
+                        .replace('<!--registros-->', filas);
+
+
+                    // FOOTER
+                    html = html
+                        .replace('<!--profesionalFirmante1-->', profesionalSolicitud)
+                        .replace('<!--usuario-->', Auth.getUserName(req))
+                        .replace(/(<!--fechaActual-->)/g, moment().format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--profesionalValidacion-->', profesionalValidacion)
+                        .replace('<!--fechaValidacion-->', moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
+                        .replace('<!--organizacionNombreSolicitud-->', prestacion.solicitud.organizacion.nombre)
+                        .replace('<!--orgacionacionDireccionSolicitud-->', organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre)
+                        .replace('<!--fechaSolicitud-->', moment(prestacion.solicitud.fecha).format('DD/MM/YYYY'));
+                    // Se carga logo del efector, si no existe se muestra el nombre del efector como texto
+                    let nombreLogo = prestacion.solicitud.organizacion.nombre.toLocaleLowerCase().replace(/-|\./g, '').replace(/ {2,}| /g, '-');
+                    try {
+                        let logoEfector;
+                        logoEfector = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/efectores/' + nombreLogo + '.png'));
+                        html = html
+                            .replace('<!--logoOrganizacion-->', `<img class="logo-efector" src="data:image/png;base64,${logoEfector.toString('base64')}">`);
+                    } catch (fileError) {
+                        html = html
+                            .replace('<!--logoOrganizacion-->', `<b class="no-logo-efector">${prestacion.solicitud.organizacion.nombre}</b>`);
+                    }
+
+                    // Logos comunes a todos los informes
+                    let logoAdicional = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/logo-adicional.png'));
+                    let logoAndes = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/logo-andes-h.png'));
+                    let logoPDP = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/logo-pdp.png'));
+                    let logoPDP2 = fs.readFileSync(path.join(__dirname, '../../../templates/rup/informes/img/logo-pdp-h.png'));
+
+                    // Firmas
+                    html = html
+                        .replace('<!--logoAdicional-->', `<img class="logo-adicional" src="data:image/png;base64,${logoAdicional.toString('base64')}">`)
+                        .replace('<!--logoAndes-->', `<img class="logo-andes" src="data:image/png;base64,${logoAndes.toString('base64')}">`)
+                        .replace('<!--logoPDP-->', `<img class="logo-pdp" src="data:image/png;base64,${logoPDP.toString('base64')}">`)
+                        .replace('<!--logoPDP2-->', `<img class="logo-pdp-h" src="data:image/png;base64,${logoPDP2.toString('base64')}">`);
+                    resolve(html);
+                } else {
+                    resolve(false);
+                }
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    }
+
+
 }
