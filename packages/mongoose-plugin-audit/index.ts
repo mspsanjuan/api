@@ -47,4 +47,12 @@ export function AuditPlugin(schema) {
         }
         next();
     });
+
+    schema.post('init', function () {
+        this._original = this.toObject();
+    });
+
+    schema.methods.original = function () {
+        return this._original;
+    };
 }
