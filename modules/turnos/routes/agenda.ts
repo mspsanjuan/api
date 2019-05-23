@@ -16,6 +16,7 @@ import { toArray } from '../../../utils/utils';
 
 import * as AgendasEstadisticas from '../controller/estadisticas';
 import { EventCore } from '@andes/event-bus';
+import { text } from 'body-parser';
 
 const router = express.Router();
 
@@ -654,12 +655,13 @@ router.get('/agenda/turno/:idTurno', async (req, res, next) => {
 router.get('/prestacionesDisponibles', async (req: any, res, next) => {
     const pipelinePrestaciones = [];
     const matchAgendas = {};
-
+    console.log(new Date(moment().format('YYYY-MM-DD HH:mm')));
     matchAgendas['organizacion._id'] = { $eq: new mongoose.Types.ObjectId(Auth.getOrganization(req)) };
     matchAgendas['bloques.turnos.horaInicio'] = { $gte: new Date(moment().format('YYYY-MM-DD HH:mm')) };
     matchAgendas['$or'] = [
         { 'bloques.restantesProgramados': { $gt: 0 } },
-        { 'bloques.restantesDelDia': { $gt: 0 } }];
+        { $and: [{ 'bloques.restantesDelDia': { $gt: 0 } }, { horaInicio: { $lte: new Date(moment().endOf().format('YYYY-MM-DD HH:mm')) } }] }];
+    // { 'bloques.restantesDelDia': { $gt: 0 } }];
 
     matchAgendas['estado'] = 'publicada';
     matchAgendas['dinamica'] = false;
@@ -696,6 +698,7 @@ router.get('/prestacionesDisponibles', async (req: any, res, next) => {
     });
 
     try {
+        console.log(pipelinePrestaciones);
         let prestaciones = await agenda.aggregate(pipelinePrestaciones);
         res.json(prestaciones);
     } catch (err) {
@@ -721,7 +724,7 @@ router.get('/agendasDisponibles', async (req: any, res, next) => {
     matchAgendas['bloques.turnos.horaInicio'] = { $gte: new Date(moment().format('YYYY-MM-DD HH:mm')) };
     matchAgendas['$or'] = [
         { 'bloques.restantesProgramados': { $gt: 0 } },
-        { 'bloques.restantesDelDia': { $gt: 0 } }];
+        { $and: [{ 'bloques.restantesDelDia': { $gt: 0 } }, { horaInicio: { $lte: new Date(moment().endOf().format('YYYY-MM-DD HH:mm')) } }] }];
 
     matchAgendas['estado'] = 'publicada';
     matchAgendas['dinamica'] = false;
@@ -744,6 +747,30 @@ router.get('/agendasDisponibles', async (req: any, res, next) => {
     } catch (err) {
         return next(err);
     }
+});
+
+router.get('/pruebaImprimir', async (req: any, res, next) => {
+    let datosParaImprimir = JSON.parse(req.query.datosParaImprimir);
+    console.log(datosParaImprimir);
+    const printer = require('node-native-printer');
+
+
+    printer.setPrinter(printer.defaultPrinterName());
+
+    console.log(printer.getCurrentPrinter());
+
+    let texto = `     COMPROBANTE DE TURNO`;
+    texto += `\n`;
+    texto += `\n${datosParaImprimir.prestacion.term.toUpperCase()}`;
+    texto += `\n`;
+    texto += `\nFECHA: ${moment(datosParaImprimir.turno.horaInicio).format('DD/MM/YYYY')}`;
+    texto += `\nHORA: ${moment(datosParaImprimir.turno.horaInicio).format('HH:mm')} HS`;
+    texto += `\nPROFESIONAL: ${datosParaImprimir.profesional.apellido.toUpperCase() } ${datosParaImprimir.profesional.nombre.toUpperCase()}`;
+
+    console.log(texto);
+    // printer.printText(texto);
+
+    res.send(true);
 });
 
 export = router;

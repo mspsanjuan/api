@@ -159,6 +159,7 @@ router.patch('/turno/agenda/:idAgenda', async (req, res, next) => {
  */
 
 router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, res, next) => {
+    console.log(req.body);
     const continues = ValidateDarTurno.checkTurno(req.body);
     const pacienteTurno = req.body.paciente;
     if (continues.valid) {

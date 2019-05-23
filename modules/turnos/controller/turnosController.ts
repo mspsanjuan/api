@@ -6,6 +6,7 @@ import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import * as controller from '../../../core/mpi/controller/paciente';
 import { Auth } from './../../../auth/auth.class';
 import { paciente as pacienteModel } from '../../../core/mpi/schemas/paciente';
+import * as moment from 'moment';
 
 export function getTurno(req) {
     return new Promise(async (resolve, reject) => {
@@ -146,22 +147,30 @@ export async function getHistorialPaciente(req) {
             let pipelineTurno = [];
             const turnos = [];
             let turno;
+            let match = {
+                estado: {
+                    $in: [
+                        'publicada',
+                        'pendienteAsistencia',
+                        'pendienteAuditoria',
+                        'auditada',
+                        'disponible',
+                        'pausada'
+                    ]
+                },
+                'bloques.turnos.paciente.id': { $in: paciente.vinculos },
+
+            };
+
+            if (req.query.turnosProximos) {
+                match['horaInicio'] = { $gte: moment().startOf('day').toDate() };
+            }
+            console.log(match);
+
             pipelineTurno = [
 
                 {
-                    $match: {
-                        estado: {
-                            $in: [
-                                'publicada',
-                                'pendienteAsistencia',
-                                'pendienteAuditoria',
-                                'auditada',
-                                'disponible',
-                                'pausada'
-                            ]
-                        },
-                        'bloques.turnos.paciente.id': { $in: paciente.vinculos }
-                    }
+                    $match: match
                 },
                 {
                     $unwind: {
@@ -214,19 +223,7 @@ export async function getHistorialPaciente(req) {
             pipelineSobreturno = [
 
                 {
-                    $match: {
-                        estado: {
-                            $in: [
-                                'publicada',
-                                'pendienteAsistencia',
-                                'pendienteAuditoria',
-                                'auditada',
-                                'disponible',
-                                'pausada'
-                            ]
-                        },
-                        'sobreturnos.paciente.id': { $in: paciente.vinculos }
-                    }
+                    $match: match
                 },
                 {
                     $unwind: {
