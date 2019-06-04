@@ -11,6 +11,7 @@ import { AndesDrive } from '@andes/drive';
 
 const requireDir = require('require-dir');
 
+
 export function initAPI(app: Express) {
     // Inicializa la autenticación con Passport/JWT
     Auth.initialize(app);
@@ -55,7 +56,7 @@ export function initAPI(app: Express) {
         }
     }
 
-    const MPI = require('./core_v2/mpi/pacientes');
+    const MPI = require('./core_v2/mpi');
     app.use('/api/core_v2/mpi', MPI.Routing);
 
     /**
