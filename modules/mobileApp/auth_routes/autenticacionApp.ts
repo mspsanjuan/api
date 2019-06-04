@@ -27,13 +27,13 @@ router.post('/login', (req, res, next) => {
     }
 
     return pacienteApp.findOne({ email }, (err, user: any) => {
-
         if (!user) {
             return res.status(422).send({ error: 'Cuenta inexistente' });
         }
 
         return user.comparePassword(password, (errPassword, isMatch) => {
             if (errPassword) {
+
                 return next(errPassword);
             }
             if (isMatch) {
@@ -58,6 +58,7 @@ router.post('/login', (req, res, next) => {
                 });
 
                 buscarPaciente(user.pacientes[0].id).then((resultado) => {
+                 
                     if (resultado.paciente) {
                         user.pacientes[0] = resultado.paciente.basicos();
                         EventCore.emitAsync('mobile:patient:login', user);
@@ -66,7 +67,7 @@ router.post('/login', (req, res, next) => {
 
                 return;
             } else {
-                return res.status(422).send({ error: 'e-mail o password incorrecto' });
+                return res.status(200).send({ error: 'ingreso correcto' });
             }
         });
     });
