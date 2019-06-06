@@ -13,6 +13,7 @@
     "@andes/log": "^1.1.5",
     "@andes/match": "^1.1.12",
     "@andes/mongoose-plugin-audit": "file:packages/mongoose-plugin-audit",
+    "@andes/mpi": "file:core_v2/mpi",
     "@elastic/elasticsearch": "^5.6.17",
     "@types/async": "^2.0.49",
     "@types/bcrypt-nodejs": "0.0.30",
