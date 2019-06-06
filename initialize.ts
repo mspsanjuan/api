@@ -56,7 +56,7 @@ export function initAPI(app: Express) {
         }
     }
 
-    const MPI = require('./core_v2/mpi');
+    const MPI = require('@andes/mpi');
     app.use('/api/core_v2/mpi', MPI.Routing);
 
     /**
