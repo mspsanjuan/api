@@ -17,7 +17,6 @@ const router = express.Router();
 router.post('/login', (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
-
     if (!email) {
         return res.status(422).send({ error: 'Se debe ingresar una dirección de e-mail' });
     }
@@ -58,7 +57,7 @@ router.post('/login', (req, res, next) => {
                 });
 
                 buscarPaciente(user.pacientes[0].id).then((resultado) => {
-                 
+
                     if (resultado.paciente) {
                         user.pacientes[0] = resultado.paciente.basicos();
                         EventCore.emitAsync('mobile:patient:login', user);
@@ -67,7 +66,11 @@ router.post('/login', (req, res, next) => {
 
                 return;
             } else {
-                return res.status(200).send({ error: 'ingreso correcto' });
+                res.status(200).json({
+                    msj: 'ingreso correcto',
+                    statusCode: res.statusCode
+                });
+
             }
         });
     });
