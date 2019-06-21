@@ -8,6 +8,7 @@ import { Connections } from './connections';
 import * as HttpStatus from 'http-status-codes';
 import { Express, Router } from 'express';
 import { AndesDrive } from '@andes/drive';
+import { apiOptions } from '@andes/api';
 
 const requireDir = require('require-dir');
 
@@ -37,6 +38,10 @@ export function initAPI(app: Express) {
         } else {
             next();
         }
+    });
+    app.use((req: any, res, next) => {
+        req.apiOptions = () => apiOptions(req);
+        next();
     });
 
     // Inicializa Swagger
