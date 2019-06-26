@@ -46,7 +46,7 @@ function matchConcepts(prestacion, registro): Promise<any> {
                 await checkNSave(registro, prestacion);
             } else {
                 for (let i = 0; i < regs.length; i++) {
-                    matchConcepts(prestacion, regs[i]);
+                    await matchConcepts(prestacion, regs[i]);
                 }
             }
         }
