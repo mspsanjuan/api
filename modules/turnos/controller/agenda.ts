@@ -786,32 +786,62 @@ export function actualizarEstadoAgendas(start, end) {
     const cursor = agendaModel.find(condicion).cursor();
     return cursor.eachAsync(doc => {
         const agenda: any = doc;
-        let turnos = [];
-        let todosAsistencia = false;
-        let todosAuditados = false;
-        for (let j = 0; j < agenda.bloques.length; j++) {
-            turnos = turnos.concat(agenda.bloques[j].turnos);
-        }
-        if (agenda.sobreturnos) {
-            turnos = turnos.concat(agenda.sobreturnos);
-        }
-        todosAsistencia = !turnos.some(t => t.estado === 'asignado' && !(t.asistencia));
-        todosAuditados = !(turnos.some(t => t.asistencia === 'asistio' && (!t.diagnostico.codificaciones[0] || (t.diagnostico.codificaciones[0] && !t.diagnostico.codificaciones[0].codificacionAuditoria))));
 
-        if (todosAsistencia) {
-            if (todosAuditados) {
-                agenda.estado = 'auditada';
-                actualizarAux(agenda);
+        if (agenda.nominalizada) {
+            let turnos = [];
+            let todosAsistencia = false;
+            let todosAuditados = false;
+            for (let j = 0; j < agenda.bloques.length; j++) {
+                turnos = turnos.concat(agenda.bloques[j].turnos);
+            }
+            if (agenda.sobreturnos) {
+                turnos = turnos.concat(agenda.sobreturnos);
+            }
+
+            /* Seteamos como auditados los turnos de las prestaciones NO-AUDITABLES (Si un bloque contiene prestaciones auditables
+                y no auditables simultaneamente) debera auditarse de forma manual. */
+            turnos.forEach(t => {
+                if (typeof (t.auditable) !== 'undefined' && t.auditable === false && t.estado === 'asignado') {
+                    if (t.asistencia === 'asistio') {
+                        if (!t.diagnostico.codificaciones.length) {
+                            /* Si al paciente se le dio asistencia desde el gestor de agendas (No tiene prestacion iniciada)
+                               se audita con codigo 'Prestacion no iniciada' */
+                            t.diagnostico.codificaciones[0] = {
+                                codificacionProfesional: 'Prestación no iniciada',
+                                codificacionAuditoria: { codigo: 'Prestación no iniciada' }
+                            };
+                        }
+                        // Para los turnos con prestación iniciada, se audita la prestacion normalmente (Con la codificación del profesional)
+                        t.diagnostico.codificaciones.forEach(c => {
+                            if (!c.codificacionAuditoria) {
+                                c.codificacionAuditoria = c.codificacionProfesional.cie10;
+                            }
+                        });
+
+                    } else if (t.asistencia !== 'noAsistio') {
+                        t.asistencia = 'sinDatos';
+                    }
+                }
+            });
+
+            // Se chequea asistencia y auditoría de turnos
+            todosAsistencia = !turnos.some(t => t.estado === 'asignado' && !(t.asistencia));
+            if (todosAsistencia) {
+                todosAuditados = !turnos.some(t => t.asistencia === 'asistio' && (!t.diagnostico.codificaciones[0] || (t.diagnostico.codificaciones[0] && !t.diagnostico.codificaciones[0].codificacionAuditoria))/*&& t.auditable*/);
+                if (todosAuditados) {
+                    agenda.estado = 'auditada';
+                    actualizarAux(agenda);
+                } else {
+                    if (agenda.estado !== 'pendienteAuditoria') {
+                        agenda.estado = 'pendienteAuditoria';
+                        actualizarAux(agenda);
+                    }
+                }
             } else {
-                if (agenda.estado !== 'pendienteAuditoria') {
-                    agenda.estado = 'pendienteAuditoria';
+                if (agenda.estado !== 'pendienteAsistencia') {
+                    agenda.estado = 'pendienteAsistencia';
                     actualizarAux(agenda);
                 }
-            }
-        } else {
-            if (agenda.estado !== 'pendienteAsistencia') {
-                agenda.estado = 'pendienteAsistencia';
-                actualizarAux(agenda);
             }
         }
     });
