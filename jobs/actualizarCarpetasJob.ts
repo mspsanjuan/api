@@ -1,8 +1,8 @@
 
 import * as carpetasCtrl from './../modules/turnos/controller/carpetasController/carpetasController';
 
-function run() {
-    carpetasCtrl.migrar();
+function run(done) {
+    carpetasCtrl.migrar(done);
 }
 
 export = run;

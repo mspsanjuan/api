@@ -1,58 +1,40 @@
-import * as utils from './utils';
-import * as config from './config';
-import * as sql from 'mssql';
-import { Organizacion } from '../../../../core/tm/schemas/organizacion';
 import * as carpetaPaciente from '../../../carpetas/schemas/carpetaPaciente';
 import * as configPrivate from '../../../../config.private';
-import { LoggerJobs } from '../../../../utils/loggerJobs';
-
+import * as mongoose from 'mongoose';
 import * as debug from 'debug';
 const logger = debug('carpetasJob');
+const Server = require('mongodb').Server;
 
-let organizacion;
-const connection = {
-    user: configPrivate.conSql.auth.user,
-    password: configPrivate.conSql.auth.password,
-    server: configPrivate.conSql.serverSql.server,
-    database: configPrivate.conSql.serverSql.database
-};
-const findUpdateCarpeta = async (paciente) => {
-    const documentoPaciente = paciente['numeroDocumento'];
+let organizacion = { _id: { $oid: '57f67d090166fa6aedb2f9fb' }, nombre: 'HOSPITAL CENTENARIO - DR. NATALIO BURD' };
+const findUpdateCarpeta = async (carpeta) => {
+    if (!carpeta) { return; }
+    const documentoPaciente = carpeta.documento;
     const condicion = { documento: documentoPaciente };
-    const carpetaNueva = {
-        organizacion: {
-            _id: organizacion._id,
-            nombre: organizacion.nombre
-        },
-        idPaciente: paciente['idPaciente'],
-        nroCarpeta: paciente['historiaClinica']
-    };
+    const carpetaNueva = carpeta.carpetaEfectores[0];
     // buscamos en carpetaPaciente los pacientes con documentoPaciente
     try {
-        const lista = await carpetaPaciente.find(condicion).exec();
-        if (lista && lista.length) {
-            const carpeta: any = lista[0];
-
-            const carpetas = carpeta.carpetaEfectores.filter(c => {
+        const hcPaciente = await carpetaPaciente.findOne(condicion).exec();
+        if (hcPaciente) {
+            const carpetas = (hcPaciente as any).carpetaEfectores.filter(c => {
                 // logger('c.organizacion: ', c.organizacion._id, 'organizacion._id: ', organizacion._id);
                 return (String(c.organizacion._id) === String(organizacion._id));
             });
             // logger('CARPETAS', carpetas.length);
             if (carpetas && carpetas.length) {
-                carpeta.carpetaEfectores.map(c => {
+                (hcPaciente as any).carpetaEfectores.map(c => {
                     if (c.organizacion._id === organizacion._id) {
-                        return c.nroCarpeta = paciente['historiaClinica'];
+                        return c.nroCarpeta = carpeta.nroCarpeta;
                     }
                 });
             } else {
-                carpeta.carpetaEfectores.push(carpetaNueva);
+                (hcPaciente as any).carpetaEfectores.push(carpetaNueva);
             }
 
-            if (carpeta._id) {
-                // logger('actualizo', documentoPaciente);
-                carpetaPaciente.update({ _id: carpeta._id }, {
+            if (hcPaciente._id) {
+                logger('actualizo', documentoPaciente);
+                await carpetaPaciente.update({ _id: hcPaciente._id }, {
                     $set:
-                        { carpetaEfectores: carpeta.carpetaEfectores }
+                        { carpetaEfectores: (hcPaciente as any).carpetaEfectores }
                 }).exec();
             }
         } else {
@@ -62,85 +44,41 @@ const findUpdateCarpeta = async (paciente) => {
                 documento: documentoPaciente,
                 carpetaEfectores: [carpetaNueva]
             });
-            nuevo.save();
+            await nuevo.save();
         }
     } catch (err) {
         logger('Error en findUpdateCarpeta', err);
-        LoggerJobs.log('actualizar carpetas', 'Error en findUpdateCarpeta: ' + err);
     }
 };
 
 
-export async function migrar() {
+export async function migrar(done) {
     try {
-        const efectores: any = await Organizacion.find({ integracionActiva: true }).exec();
-        if (efectores && efectores.length > 0) {
-
-            logger('Efectores---->', efectores);
-            // ejecutamos la migracion para cada efector en paralelo.
-            for (const efector of efectores) {
-                await migrarEfector(efector);
+        const MongoClient = require('mongodb').MongoClient;
+        const assert = require('assert');
+        // Connection URL
+        const url = 'mongodb://localhost:27017';
+        // Database Name
+        const dbName = 'andes';
+        // Create a new MongoClient
+        const client = new MongoClient(url);
+        // Use connect method to connect to the Server
+        client.connect(async function (err) {
+            assert.equal(null, err);
+            console.log('Connected successfully to server');
+            const db = client.db(dbName);
+            logger('CONECTADO');
+            if (err) {
+                logger('Error Migrando', err);
+                return;
             }
-
-        } else {
-            logger('Código de organización inválido, verifica el codigo Sisa ingresado');
-        }
+            let cursor = db.collection('carpetasLocales').find({});
+            while (cursor.hasNext) {
+                let doc = await cursor.next();
+                await findUpdateCarpeta(doc);
+            }
+        });
     } catch (err) {
-        logger('Error al obtener la organización', err);
-        LoggerJobs.log('actualizar carpetas', 'Error al obtener la organización: ' + err);
-    }
-
-    async function migrarEfector(element: any) {
-
-        logger('Migrando carpetas de pacientes en:  ', element.nombre);
-        const idSips = await getIdSips(element);
-        logger('codigo ', element.codigo.sisa);
-        const q_limites = `select MIN(PAC.idPaciente) as min, COUNT(PAC.idPaciente) as max from dbo.sys_paciente as PAC inner
-                            join dbo.Sys_RelHistoriaClinicaEfector AS rhe ON rhe.idPaciente = pac.idPaciente
-                            WHERE PAC.activo = 1` + ' AND rhe.idEfector=' + idSips;
-        logger('Se actualizarán las carpetas de los pacientes desde SIPS de ', element.nombre);
-        organizacion = element;
-        if (idSips) {
-            try {
-                // let consulta = config.consultaPacienteSipsHC + ' AND efector.idEfector=' + element.codigo.idSips + ' AND PAC.idPaciente between @offset and @limit';
-                const consulta = config.consultaCarpetaPacienteSips + ' AND rhe.idEfector=' + idSips.idEfector;
-                logger('EFECTOR', idSips, organizacion.nombre);
-                const connectionPool = await sql.connect(connection);
-                sql.on('error', err => {
-                    logger('Error SQL---->', err);
-                });
-                await utils.migrar(consulta, q_limites, 10000, findUpdateCarpeta, connectionPool);
-                sql.close();
-                logger('Migracion de datos completa desde ', organizacion.nombre);
-            } catch (err) {
-                logger('Error migrando en efector' + organizacion.nombre, err);
-                LoggerJobs.log('actualizar carpetas', 'Error migrando en efector' + organizacion.nombre + ': ' + err);
-            }
-        } else {
-            logger('ID sips inválido');
-        }
-
-    }
-
-    async function getIdSips(efector) {
-
-        try {
-            const connectionPool = await sql.connect(connection);
-            sql.on('error', err => {
-                logger('Error SQL---->', err);
-            });
-
-            const querySips = `select idEfector from dbo.sys_Efector as efector WHERE codigoSisa=` + `'` + String(efector.codigo.sisa) + `'`;
-            let resultado = await connectionPool.request()
-                .query(querySips);
-            resultado = resultado.recordset[0];
-            logger('IDSIPS', resultado);
-            sql.close();
-            return resultado;
-        } catch (err) {
-            logger('Error obteniendo ID sips', err);
-            LoggerJobs.log('actualizar carpetas', 'Error obteniendo ID sips: ' + err);
-        }
+        logger('Error Migrando', err);
     }
 }
-
