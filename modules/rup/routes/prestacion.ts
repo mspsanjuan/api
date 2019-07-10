@@ -500,6 +500,16 @@ router.post('/prestaciones', (req, res, next) => {
     });
 });
 
+router.post('/prestaciones/:id/registros', async (req, res, next) => {
+    const registro = req.body;
+    const prestacion: any = await Prestacion.findById(req.params.id);
+    prestacion.ejecucion.registros.push(registro);
+    Auth.audit(prestacion, req);
+    await prestacion.save();
+    return res.json(registro);
+
+});
+
 router.patch('/prestaciones/:id', (req, res, next) => {
     Prestacion.findById(req.params.id, (err, data: any) => {
         if (err) {
