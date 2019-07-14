@@ -50,6 +50,9 @@ router.get('/puco', async (req, res, next) => {
             padron = req.query.periodo;
         } else {
             padron = await pucoController.obtenerVersiones();   // trae las distintas versiones de los padrones
+            if (!padron.length) {
+                return res.json([]);
+            }
             padron = padron[0].version; // asigna el ultimo padron actualizado
         }
         // realiza la busqueda por dni y el padron seteado anteriormente
@@ -63,12 +66,12 @@ router.get('/puco', async (req, res, next) => {
                 unaOS = await ObraSocial.find({ codigoPuco: rta[i].codigoOS }).exec();
                 resultOS[i] = { tipoDocumento: rta[i].tipoDoc, dni: rta[i].dni, transmite: rta[i].transmite, nombre: rta[i].nombre, codigoFinanciador: rta[i].codigoOS, idFinanciador: unaOS[0]._id, financiador: unaOS[0].nombre, version: rta[i].version };
             }
-            res.json(resultOS);
+            return res.json(resultOS);
         } else {
-            res.json([]);
+            return res.json([]);
         }
     } else {
-        res.json({ msg: 'Parámetros incorrectos' });
+        return res.json({ msg: 'Parámetros incorrectos' });
     }
 });
 
