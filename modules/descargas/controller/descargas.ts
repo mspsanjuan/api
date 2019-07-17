@@ -184,7 +184,6 @@ export class Documento {
             .replace('<!--indicaciones-->', plan.valor.solicitudPrestacion.indicaciones)
             .replace('<!--organizacionDestino-->', (plan.valor.solicitudPrestacion.organizacionDestino ? plan.valor.solicitudPrestacion.organizacionDestino.nombre : ''))
             .replace('<!--profesionalesDestino-->', plan.valor.solicitudPrestacion.profesionalesDestino ? plan.valor.solicitudPrestacion.profesionalesDestino.map(y => y.nombreCompleto).join(' ') : '');
-
     }
 
     // 'procedimiento' || 'entidad observable' || 'régimen/tratamiento' || 'elemento de registro'
@@ -209,7 +208,7 @@ export class Documento {
 
         return template
             .replace('<!--concepto-->', proc.concepto.conceptId !== '716141001' ? this.ucaseFirst(proc.nombre) : (proc.concepto.term[0].toLocaleUpperCase() + proc.concepto.term.slice(1)))
-            .replace('<!--valor-->', valor)
+            .replace('<!--valor-->', `: <small>${valor}</small>`)
             // .replace('<!--valor-->', (proc.valor || this.getRegistros(proc)))
             .replace('<!--motivoPrincipalDeConsulta-->', proc.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '');
 
@@ -217,9 +216,10 @@ export class Documento {
 
     // 'procedimiento' || 'hallazgo' || 'trastorno'
     static generarRegistroHallazgoHTML(hallazgo: any, template: string): any {
+        let evo = ((hallazgo.valor.evolucion).replace('<p>', '')).replace('</p>', '');
         return template
             .replace('<!--concepto-->', hallazgo.nombre ? hallazgo.nombre : this.ucaseFirst(hallazgo.concepto.term))
-            .replace('<!--evolucion-->', (hallazgo.valor && hallazgo.valor.evolucion) ? `<p><b>Evolución</b>: ${hallazgo.valor.evolucion}` : ``)
+            .replace('<!--evolucion-->', (hallazgo.valor && hallazgo.valor.evolucion) ? `<p>Evolución: <small>${evo}</small>` : ``)
             .replace('<!--motivoPrincipalDeConsulta-->', hallazgo.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '');
     }
 
@@ -238,10 +238,25 @@ export class Documento {
     }
 
     // 'archivo adjunto'
-    static generarArchivoAdjuntoHTML(registro: any, template: string): any {
 
+    static async generarArchivoAdjuntoHTML(registro: any, template: string) {
+        let templateAdjuntos = '';
+        let adjuntos = [];
+        try {
+            adjuntos = await this.obtenerAdjuntosHTML(registro, template);
+            adjuntos.forEach(adj => {
+                templateAdjuntos += adj;
+            });
+            templateAdjuntos = template.replace(`<!--adjuntos-->`, templateAdjuntos);
+            return templateAdjuntos;
+        } catch (error) {
+            return 'Error cargando archivos adjuntos.';
+        }
+    }
+
+    static obtenerAdjuntosHTML(registro: any, template: string) {
         let filePromises = [];
-        let adjuntos = '';
+        let adjunto = '';
 
         let templateAdjuntos = '';
         filePromises = registro.valor.documentos.filter(doc => doc.ext !== 'pdf').map(documento => {
@@ -254,18 +269,16 @@ export class Documento {
                     });
 
                     archivo.stream.on('end', () => {
-                        adjuntos = `<img src="data:image/${documento.ext};base64,${Buffer.concat(file).toString('base64')}">`;
-                        templateAdjuntos = template.replace(`<!--adjuntos-->`, adjuntos);
-                        resolve(templateAdjuntos);
+                        adjunto = `<img src="data:image/${documento.ext};base64,${Buffer.concat(file).toString('base64')}">`;
+                        // templateAdjuntos = template.replace(`<!--adjuntos-->`, adjuntos);
+                        resolve(adjunto);
                     });
 
                 });
             });
-
         });
 
         return Promise.all(filePromises);
-
     }
 
     static crearProcedimientos(proc, template) {
@@ -313,7 +326,6 @@ export class Documento {
         return new Promise(async (resolve, reject) => {
             for (let i = 0; i < registros.length; i++) {
 
-
                 if (registros[i]) {
                     // Es resumen de la internación?
                     if (registros[0].concepto.conceptId === '3571000013102') {
@@ -326,13 +338,14 @@ export class Documento {
                         this.nivelPadre = (registros[i].registros.length > 0) ? 1 : 2;
                     }
                     if (registros[i].valor) {
-                        if (registros[i].valor.descripcion) {
+                        if (typeof registros[i].valor === 'string') {
+                            let nombreRegistro = ((registros[i].nombre).replace('<p>', '')).replace('</p>', '');
+                            let valorRegistro = ((registros[i].valor).replace('<p>', '')).replace('</p>', '');
                             this.informeRegistros = [...this.informeRegistros, ({
                                 concepto: { term: registros[i].nombre, semanticTag: registros[i].concepto.semanticTag },
-                                valor: `<div class="nivel-${this.nivelPadre}"><h3>${this.ucaseFirst(registros[i].nombre)}</h3><p>${this.ucaseFirst(registros[i].valor.descripcion)}</p></div>`
+                                valor: `<div class="nivel-${this.nivelPadre}"><p>${nombreRegistro}: <small>${valorRegistro}</small></p></div>`
                             })];
                         } else if (registros[i].valor !== null) {
-
                             if (this.esHallazgo(registros[i].concepto.semanticTag)) {
                                 this.informeRegistros = [...this.informeRegistros, ({
                                     concepto: { term: registros[i].concepto.term, semanticTag: registros[i].concepto.semanticTag },
@@ -358,7 +371,7 @@ export class Documento {
                                 let adjuntos = await this.generarArchivoAdjuntoHTML(registros[i], this.adjuntoTemplate);
                                 this.informeRegistros = [...this.informeRegistros, ({
                                     concepto: { term: registros[i].concepto.term, semanticTag: registros[i].concepto.semanticTag },
-                                    valor: `<div class="nivel-${this.nivelPadre}">${adjuntos.join('<br>')}</div>`
+                                    valor: `<div class="nivel-${this.nivelPadre}">${adjuntos + ('<br>')}</div>`
                                 })];
 
                             } else {
@@ -367,14 +380,14 @@ export class Documento {
                                 }
                                 this.informeRegistros = [...this.informeRegistros, ({
                                     concepto: { term: registros[i].nombre, semanticTag: registros[i].concepto.semanticTag },
-                                    valor: `<div class="nivel-${this.nivelPadre}"><h3>${this.ucaseFirst(registros[i].nombre)}</h3><p>${registros[i].valor}</p></div>`
+                                    valor: `<div class="nivel-${this.nivelPadre}"><h4>${this.ucaseFirst(registros[i].nombre)}</h4>${registros[i].valor}</div>`
                                 })];
                             }
                         }
                     } else if (registros[i].nombre) {
                         this.informeRegistros = [...this.informeRegistros, ({
                             concepto: { term: registros[i].nombre, semanticTag: registros[i].concepto.semanticTag },
-                            valor: `<div class="nivel-${this.nivelPadre}"><h3>${this.ucaseFirst(registros[i].nombre)}</h3><p>${registros[i].valor ? registros[i].valor : ''}</p></div>`
+                            valor: `<div class="nivel-${this.nivelPadre}"><h4>${this.ucaseFirst(registros[i].nombre)}</h4><p>${registros[i].valor ? registros[i].valor : ''}</p></div>`
                         })];
                     }
                     if (registros[i] && registros[i].registros && registros[i].registros.length > 0) {
@@ -476,6 +489,13 @@ export class Documento {
 
 
                     let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+
+                    switch (prestacion.ejecucion.registros[0].concepto.conceptId) {
+                        case '310634005':
+                            registros = this.filtroColonoscopia(registros);
+                            break;
+                    }
+
                     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
                     await this.generarInforme(registros);
 
@@ -615,6 +635,38 @@ export class Documento {
             }
         });
     }
+
+    private static filtroColonoscopia(registros: any[]) {
+        let index = 0;
+        let resp = [];
+        registros.forEach(reg => {
+            switch (reg.concepto.conceptId) {
+                case '422843007':
+                    resp[0] = reg;
+                    break;
+                case '443425001':
+                    resp[1] = reg;
+                    break;
+                case '440588003':
+                    resp[2] = reg;
+                    break;
+                case '445665009':
+                    resp[3] = reg;
+                    break;
+                case '423100009':
+                    resp[4] = reg;
+                    break;
+                case '225423004':
+                    resp[5] = reg;
+                    break;
+                case '1921000013108':
+                    resp[6] = reg;
+                    break;
+            }
+        });
+        return resp;
+    }
+
 
     private static generarCSS() {
         // Se agregan los estilos CSS
