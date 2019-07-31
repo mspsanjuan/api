@@ -244,7 +244,7 @@ export class Documento {
         let adjuntos = '';
 
         let templateAdjuntos = '';
-        filePromises = registro.valor.documentos.filter(doc => doc.ext !== 'pdf').map(documento => {
+        filePromises = registro.valor.documentos.map(documento => {
             return new Promise(async (resolve, reject) => {
                 rupStore.readFile(documento.id).then((archivo: any) => {
 
@@ -405,6 +405,8 @@ export class Documento {
                 // Prestación
                 let prestacion: any = await this.getPrestacionData(req.body.idPrestacion);
 
+                let registro: any = req.body.idRegistro ? prestacion.ejecucion.registros.find(y => y.id === req.body.idRegistro) : null;
+
                 // Títulos default
                 let tituloFechaEjecucion = 'Fecha Ejecución';
                 let tituloFechaValidacion = 'Fecha Validación';
@@ -474,10 +476,13 @@ export class Documento {
                         }
                     }
 
-
-                    let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
-                    // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
-                    await this.generarInforme(registros);
+                    if (!registro) {
+                        let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+                        // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
+                        await this.generarInforme(registros);
+                    } else {
+                        await this.generarInforme([registro]);
+                    }
 
 
                     // Si no hay configuración de informe o si se configura "registrosDefault" en true, se genera el informe por defecto (default)
@@ -711,9 +716,8 @@ export class Documento {
                     this.options = options || phantomPDFOptions;
 
                     await this.generarHTML(req).then(async htmlPDF => {
-                        htmlPDF = htmlPDF + this.generarCSS();
-                        fs.writeFileSync('/tmp/test.html', htmlPDF);
-                        await pdf.create(htmlPDF, this.options).toFile((err2, file): any => {
+                        const htmlCss = htmlPDF + this.generarCSS();
+                        await pdf.create(htmlCss, this.options).toFile((err2, file): any => {
                             // async
                             // const pdf2 = await htmlPdf.create(htmlPDF, options);
                             // await pdf2.toFile('/tmp/test.pdf');
@@ -753,7 +757,6 @@ export class Documento {
                             left: '0cm'
                         },
                         header: {
-                            top: '0cm',
                             height: '0cm'
                         },
                         footer: {
