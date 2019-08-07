@@ -60,22 +60,18 @@ const CodCauExtL = {
     'Lugar de trabajo': 3,
     Otro: 4,
     'Se ignora': 9
-
 };
 
-function run(done) {
-    exportarInternacionesAnielo(done);
-}
+const filtros = {
+    fechaIngresoDesde: new Date('01/01/2019'),
+    fechaIngresoHasta: new Date('12/31/2019')
+};
+const idOrganizacion = '57fcf037326e73143fb48c55';     // hospital añelo
 
-async function exportarInternacionesAnielo(done) {
-    let filtros = {
-        fechaIngresoDesde: new Date('01/01/2019'),
-        fechaIngresoHasta: new Date('12/31/2019')
-    };
-    let idOrganizacion = '57fcf037326e73143fb48c55';     // hospital añelo
-
+export async function exportarInternacionesAnielo() {
     try {
         let internaciones: any[] = await listadoInternacion(filtros, idOrganizacion);
+        let internacionResp = [];
 
         internaciones.forEach((documento: any) => {
             let datosIngreso = documento.ejecucion.registros[0];    // para chequear si existen registros
@@ -83,68 +79,68 @@ async function exportarInternacionesAnielo(done) {
             let informeDeIngreso = documento.ejecucion.registros[0].valor.informeIngreso;   // para acceder a informes
             let informeDeEgreso = (datosEgreso) ? documento.ejecucion.registros[1].valor.InformeEgreso : null;
 
-            let resp: any = {
-                AnioInfor: (datosEgreso) ? moment(informeDeEgreso.fechaEgreso).format('DD/MM/YYYY') : '',
-                Estab: 'HOSPITAL AÑELO',
-                HistClin: informeDeIngreso.nroCarpeta,
-                Apellido: documento.paciente.apellido,
-                Nombre: documento.paciente.nombre,
-                CodDocum: 1,
-                NumDocum: documento.paciente.documento,
-                NacDia: moment(documento.paciente.fechaNacimiento).day(),
-                NacMes: moment(documento.paciente.fechaNacimiento).month(),
-                NacAnio: moment(documento.paciente.fechaNacimiento).year(),
-                CodUniEdad: 1,
-                UniEdad: 'años',
-                EdadIng: moment().diff(documento.paciente.fechaNacimiento, 'years', false),
-                LocRes: 'Añelo',
-                ProvRes: 'Neuquen',
-                PaisRes: 'Argentina',
-                CodSexo: CodSexo[documento.paciente.sexo],
-                Sexo: documento.paciente.sexo,
-                CodAsoc: (informeDeIngreso.obraSocial !== null) ? 1 : 5,
-                Osoc: (informeDeIngreso.obraSocial !== null) ? informeDeIngreso.obraSocial.nombre : '',
-                CodNivelI: CodNivelI[informeDeIngreso.nivelInstruccion],
-                NivelInst: informeDeIngreso.nivelInstruccion,
-                CodSitLab: CodSitLab[informeDeIngreso.situacionLaboral],
-                SitLab: informeDeIngreso.situacionLaboral,
-                CodOcupac: '', // VER !!! (NO HAY CODIGO)  ********************************
-                Ocupac: informeDeIngreso.ocupacionHabitual,
-                CodHospPor: CodHospPor[informeDeIngreso.origen],
-                HospPor: informeDeIngreso.origen,
-                Origen: 'ver!!!',
-                FecIngreso: moment(informeDeIngreso.fechaIngreso).format('DD/MM/YYYY'),
-                FecEgreso: (datosEgreso) ? moment(informeDeEgreso.fechaEgreso).format('DD/MM/YYYY') : '',
-                ServEgre: informeDeIngreso.especialidades.term,
-                EspecEgre: informeDeIngreso.especialidades.term,
-                DiasTotEst: (datosEgreso) ? informeDeEgreso.diasDeEstada : '',
-                CodEgresP: CodEgresP[(datosEgreso && informeDeEgreso.tipoEgreso) ? informeDeEgreso.tipoEgreso.nombre : 'Otro'],
-                EgresP: (datosEgreso && informeDeEgreso.tipoEgreso) ? informeDeEgreso.tipoEgreso.nombre : '',
-                Lugar_Trasl: (datosEgreso && informeDeEgreso.UnidadOrganizativaDestino) ? informeDeEgreso.UnidadOrganizativaDestino.nombre : '',
-                CodDiagPr: (datosEgreso && informeDeEgreso.diagnosticoPrincipal) ? informeDeEgreso.diagnosticoPrincipal.codigo : '',
-                OtDiag1: (datosEgreso && informeDeEgreso.otrasCircunstancias) ? informeDeEgreso.otrasCircunstancias.nombre : '',
-                CodCauExtT: (informeDeEgreso.causaExterna.producidaPor !== null) ? CodCauExtT[informeDeEgreso.causaExterna.producidaPor] : CodCauExtT['Se ignora'],
-                CauExtT: (informeDeEgreso.causaExterna.producidaPor !== null) ? informeDeEgreso.causaExterna.producidaPor : '',
-                CodCauExtL: (informeDeEgreso.causaExterna.lugar !== null) ? informeDeEgreso.causaExterna.lugar : CodCauExtT['Se ignora'],
-                CauExtL: (informeDeEgreso.causaExterna.lugar !== null) ? informeDeEgreso.causaExterna.lugar : ''
-            };
-            if (datosEgreso && informeDeEgreso.nacimientos[0].pesoAlNacer) {
-                let nacimientos = informeDeEgreso.nacimientos;
-                for (let j = 0; j < nacimientos.length; j++) {
-                    resp['PesoNacerRN' + (j + 1)] = nacimientos[j].pesoAlNacer;
-                    resp['CondNacRN' + (j + 1)] = nacimientos[j].condicionAlNacer;
-                    resp['TermRN' + (j + 1)] = nacimientos[j].terminacion;
-                    resp['SexoRN' + (j + 1)] = nacimientos[j].sexo;
-                    resp['CodSexoRN' + (j + 1)] = CodSexo[nacimientos[j].sexo];
+            if (datosIngreso) {
+                let resp: any = {
+                    AnioInfor: (datosEgreso) ? moment(informeDeEgreso.fechaEgreso).format('DD/MM/YYYY') : '',
+                    Estab: 'HOSPITAL AÑELO',
+                    HistClin: informeDeIngreso.nroCarpeta,
+                    Apellido: documento.paciente.apellido,
+                    Nombre: documento.paciente.nombre,
+                    CodDocum: 1,
+                    NumDocum: documento.paciente.documento,
+                    NacDia: moment(documento.paciente.fechaNacimiento).day(),
+                    NacMes: moment(documento.paciente.fechaNacimiento).month(),
+                    NacAnio: moment(documento.paciente.fechaNacimiento).year(),
+                    CodUniEdad: 1,
+                    UniEdad: 'años',
+                    EdadIng: moment().diff(documento.paciente.fechaNacimiento, 'years', false),
+                    LocRes: 'Añelo',
+                    ProvRes: 'Neuquen',
+                    PaisRes: 'Argentina',
+                    CodSexo: CodSexo[documento.paciente.sexo],
+                    Sexo: documento.paciente.sexo,
+                    CodAsoc: (informeDeIngreso.obraSocial !== null) ? 1 : 5,
+                    Osoc: (informeDeIngreso.obraSocial !== null) ? informeDeIngreso.obraSocial.nombre : '',
+                    CodNivelI: CodNivelI[informeDeIngreso.nivelInstruccion],
+                    NivelInst: informeDeIngreso.nivelInstruccion,
+                    CodSitLab: CodSitLab[informeDeIngreso.situacionLaboral],
+                    SitLab: informeDeIngreso.situacionLaboral,
+                    CodOcupac: '', // VER !!! (NO HAY CODIGO)  ********************************
+                    Ocupac: informeDeIngreso.ocupacionHabitual,
+                    CodHospPor: CodHospPor[informeDeIngreso.origen],
+                    HospPor: informeDeIngreso.origen,
+                    Origen: 'ver!!!',
+                    FecIngreso: moment(informeDeIngreso.fechaIngreso).format('DD/MM/YYYY'),
+                    FecEgreso: (datosEgreso) ? moment(informeDeEgreso.fechaEgreso).format('DD/MM/YYYY') : '',
+                    ServEgre: (informeDeIngreso.especialidades) ? informeDeIngreso.especialidades.term : '',
+                    EspecEgre: (informeDeIngreso.especialidades) ? informeDeIngreso.especialidades.term : '',
+                    DiasTotEst: (datosEgreso) ? informeDeEgreso.diasDeEstada : '',
+                    CodEgresP: CodEgresP[(datosEgreso && informeDeEgreso.tipoEgreso) ? informeDeEgreso.tipoEgreso.nombre : 'Otro'],
+                    EgresP: (datosEgreso && informeDeEgreso.tipoEgreso) ? informeDeEgreso.tipoEgreso.nombre : '',
+                    Lugar_Trasl: (datosEgreso && informeDeEgreso.UnidadOrganizativaDestino) ? informeDeEgreso.UnidadOrganizativaDestino.nombre : '',
+                    CodDiagPr: (datosEgreso && informeDeEgreso.diagnosticoPrincipal) ? informeDeEgreso.diagnosticoPrincipal.codigo : '',
+                    OtDiag1: (datosEgreso && informeDeEgreso.otrasCircunstancias) ? informeDeEgreso.otrasCircunstancias.nombre : '',
+                    CodCauExtT: (datosEgreso && informeDeEgreso.causaExterna.producidaPor !== null) ? CodCauExtT[informeDeEgreso.causaExterna.producidaPor] : CodCauExtT['Se ignora'],
+                    CauExtT: (datosEgreso && informeDeEgreso.causaExterna.producidaPor !== null) ? informeDeEgreso.causaExterna.producidaPor : '',
+                    CodCauExtL: (datosEgreso && informeDeEgreso.causaExterna.lugar !== null) ? informeDeEgreso.causaExterna.lugar : CodCauExtL['Se ignora'],
+                    CauExtL: (datosEgreso && informeDeEgreso.causaExterna.lugar !== null) ? informeDeEgreso.causaExterna.lugar : ''
+                };
+                if (datosEgreso && informeDeEgreso.nacimientos && informeDeEgreso.nacimientos[0].pesoAlNacer) {
+                    let nacimientos = informeDeEgreso.nacimientos;
+                    for (let j = 0; j < nacimientos.length; j++) {
+                        resp['PesoNacerRN' + (j + 1)] = nacimientos[j].pesoAlNacer;
+                        resp['CondNacRN' + (j + 1)] = nacimientos[j].condicionAlNacer;
+                        resp['TermRN' + (j + 1)] = nacimientos[j].terminacion;
+                        resp['SexoRN' + (j + 1)] = nacimientos[j].sexo;
+                        resp['CodSexoRN' + (j + 1)] = CodSexo[nacimientos[j].sexo];
+                    }
                 }
+                internacionResp.push(resp);
             }
-            console.log(resp);
         });
+        return internacionResp;
     } catch (err) {
         console.log('error!');
+        return null;
     }
-    done();
 }
-
-
-export = run;
