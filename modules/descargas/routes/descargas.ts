@@ -86,7 +86,51 @@ router.post('/internaciones/Csv', async (req, res, next) => {
         csv
             .write(data, {
                 headers: true, transform: (row) => {
-                    return JSON.parse(data);
+                    return {
+                        AnioInfor: row.AnioInfor,
+                        Estab: row.Estab,
+                        HistClin: row.HistClin,
+                        Apellido: row.Apellido,
+                        Nombre: row.Nombre,
+                        CodDocum: row.CodDocum,
+                        NumDocum: row.NumDocum,
+                        NacDia: row.NacDia,
+                        NacMes: row.NacMes,
+                        NacAnio: row.NacAnio,
+                        CodUniEdad: row.CodUniEdad,
+                        UniEdad: row.UniEdad,
+                        EdadIng: row.EdadIng,
+                        LocRes: row.LocRes,
+                        ProvRes: row.ProvRes,
+                        PaisRes: row.PaisRes,
+                        CodSexo: row.CodSexo,
+                        Sexo: row.Sexo,
+                        CodAsoc: row.CodAsoc,
+                        Osoc: row.Osoc,
+                        CodNivelI: row.CodNivelI,
+                        NivelInst: row.NivelInst,
+                        CodSitLab: row.CodSitLab,
+                        SitLab: row.SitLab,
+                        //   CodOcupac: row.CodOcupac,
+                        Ocupac: row.Ocupac,
+                        CodHospPor: row.CodHospPor,
+                        HospPor: row.HospPor,
+                        // Origen: row.Origen,
+                        FecIngreso: row.FecIngreso,
+                        FecEgreso: row.FecEgreso,
+                        ServEgre: row.ServEgre,
+                        EspecEgre: row.EspecEgre,
+                        DiasTotEst: row.DiasTotEst,
+                        CodEgresP: row.CodEgresP,
+                        EgresP: row.EgresP,
+                        Lugar_Trasl: row.Lugar_Trasl,
+                        CodDiagPr: row.CodDiagPr,
+                        OtDiag1: row.OtDiag1,
+                        CodCauExtT: row.CodCauExtT,
+                        CauExtT: row.CauExtT,
+                        CodCauExtL: row.CodCauExtL,
+                        CauExtL: row.CauExtL
+                    };
                 }
             })
             .pipe(ws)
