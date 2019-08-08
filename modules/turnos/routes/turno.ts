@@ -2,7 +2,6 @@ import { Types } from 'mongoose';
 import { ValidateDarTurno } from './../../../utils/validateDarTurno';
 import * as express from 'express';
 import * as agenda from '../schemas/agenda';
-import { Logger } from '../../../utils/logService';
 import { paciente } from '../../../core/mpi/schemas/paciente';
 import * as pacienteController from '../../../core/mpi/controller/paciente';
 
@@ -17,6 +16,10 @@ import { EventCore } from '@andes/event-bus';
 import * as carpetaPaciente from '../../carpetas/schemas/carpetaPaciente';
 import * as controller from '../../../core/mpi/controller/paciente';
 import * as prepagasController from '../../obraSocial/controller/prepagas';
+
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+const turnosLog = new Logger({ connection: Connections.logs, module: 'citas', application: 'andes', type: 'turnos' });
 
 const router = express.Router();
 const dbgTurno = debug('dbgTurno');
@@ -126,7 +129,7 @@ router.patch('/turno/agenda/:idAgenda', async (req, res, next) => {
                     nota: doc2.nota,
                     motivoConsulta: doc2.motivoConsulta
                 };
-                Logger.log(req, 'citas', 'asignarTurno', datosOp);
+                turnosLog.info('asignarTurno', datosOp, req);
                 const turnoLog = doc2.bloques[0].turnos[turnos.length - 1];
 
                 LoggerPaciente.logTurno(req, 'turnos:dar', req.body.paciente, turnoLog, doc2.bloques[0].id, req.params.idAgenda);
@@ -335,7 +338,8 @@ router.patch('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, r
                     await prepagasController.actualizarPadronPrepagas(documento, sexo, obraSocial);
                 }
 
-                Logger.log(req, 'citas', 'asignarTurno', datosOp);
+                turnosLog.info('asignarTurno', datosOp, req);
+
                 let turno = doc2.bloques.id(req.body.idBloque).turnos.id(req.body.idTurno);
 
                 LoggerPaciente.logTurno(req, 'turnos:dar', req.body.paciente, turno, req.body.idBloque, req.body.idAgenda);
@@ -448,11 +452,8 @@ router.put('/turno/:idTurno/bloque/:idBloque/agenda/:idAgenda/', async (req, res
                 if (writeOpResult && writeOpResult.value === null) {
                     return next('No se pudo actualizar los datos del turno');
                 } else {
-                    const datosOp = {
-                        turno: update[etiquetaTurno]
-                    };
                     // TODO: loggear estas operaciones sobre turnos de forma mas clara.
-                    Logger.log(req, 'citas', 'update', datosOp);
+                    turnosLog.info('update', update[etiquetaTurno], req);
                 }
                 // Inserto la modificación como una nueva agenda, ya que luego de asociada a SIPS se borra de la cache
                 // Donde doc2 es el documeto de la Agenda actualizado

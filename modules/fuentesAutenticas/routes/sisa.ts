@@ -2,7 +2,12 @@ import * as express from 'express';
 import { Auth } from '../../../auth/auth.class';
 import { matchSisa } from '../../../utils/servicioSisa';
 import { getPacienteSisa } from '../../../utils/servicioSisa';
-import { Logger } from '../../../utils/logService';
+
+/**
+ * RUTAS
+ * @deprecated
+ * [DEPRECATED]
+ */
 
 const router = express.Router();
 
@@ -15,13 +20,13 @@ router.get('/sisa', async (req, res, next) => {
         try {
             const pacienteSisa = await matchSisa(paciente);
             res.json(pacienteSisa);
-            Logger.log(req, 'fa_sisa', 'validar', {
-                resultado: pacienteSisa
-            });
+            // Logger.log(req, 'fa_sisa', 'validar', {
+            //     resultado: pacienteSisa
+            // });
         } catch (err) {
-            Logger.log(req, 'fa_sisa', 'error', {
-                error: err
-            });
+            // Logger.log(req, 'fa_sisa', 'error', {
+            //     error: err
+            // });
             return next(err);
         }
     } else {
@@ -40,13 +45,13 @@ router.get('/pacienteSisa', async (req, res, next) => {
         try {
             const pacienteSisa = await getPacienteSisa(documento, sexo);
             res.json(pacienteSisa);
-            Logger.log(req, 'fa_sisa', 'validar', {
-                resultado: pacienteSisa
-            });
+            // Logger.log(req, 'fa_sisa', 'validar', {
+            //     resultado: pacienteSisa
+            // });
         } catch (err) {
-            Logger.log(req, 'fa_sisa', 'error', {
-                error: err
-            });
+            // Logger.log(req, 'fa_sisa', 'error', {
+            //     error: err
+            // });
             return next(err);
         }
     } else {

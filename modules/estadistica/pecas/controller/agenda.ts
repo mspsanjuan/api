@@ -4,10 +4,13 @@ import * as sql from 'mssql';
 import * as configPrivate from '../../../../config.private';
 import { Organizacion } from '../../../../core/tm/schemas/organizacion';
 import { pecasExport, exportDinamicasSinTurnos } from '../controller/aggregateQueryPecas';
-import { log } from '@andes/log';
+
 import { sendMail } from '../../../../utils/roboSender/sendEmail';
 import { emailListString } from '../../../../config.private';
 
+import { Logger } from '@andes/log';
+import { Connections } from '../../../../connections';
+const pecasLog = new Logger({ connection: Connections.logs, module: 'jobs', application: 'andes', type: 'pecas' });
 
 let poolTurnos;
 const config = {
@@ -78,7 +81,8 @@ export async function consultaPecas(done, start, end) {
             return (done(null));
         }
     } catch (error) {
-        await log(logRequest, 'andes:pecas:bi', null, 'delete', error, null);
+        pecasLog.error('delete', {}, error, logRequest);
+        // await log(logRequest, 'andes:pecas:bi', null, 'delete', error, null);
         return (done(error));
     }
 }
@@ -146,7 +150,8 @@ async function insertCompleto(turno: any, idEfectorSips) {
         let resultado = await executeQuery(queryInsert);
         return resultado;
     } catch (error) {
-        await log(logRequest, 'andes:pecas:bi', null, 'insert', error, null);
+        pecasLog.error('insert', {}, error, logRequest);
+        // await log(logRequest, 'andes:pecas:bi', null, 'insert', error, null);
         return (error);
     }
 }
@@ -159,7 +164,8 @@ async function eliminaAgenda(idAgenda) {
         let options = mailOptions;
         options.text = `'error en el delete: ${query}'`;
         sendMail(mailOptions);
-        await log(logRequest, 'andes:pecas:bi', null, 'delete', err, null);
+        pecasLog.error('delete', {}, err, logRequest);
+        // await log(logRequest, 'andes:pecas:bi', null, 'delete', err, null);
     }
 }
 
@@ -185,7 +191,8 @@ async function executeQuery(query: any) {
         let options = mailOptions;
         options.text = `'error en consulta sql: ${query}'`;
         sendMail(mailOptions);
-        await log(logRequest, 'andes:pecas:bi', null, 'SQLOperation', query, err);
+        pecasLog.error('SQLOperation', query, err, logRequest);
+        // await log(logRequest, 'andes:pecas:bi', null, 'SQLOperation', query, err);
         return err;
     }
 }

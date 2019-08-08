@@ -3,11 +3,16 @@ import * as mongoose from 'mongoose';
 // import { llaveTipoPrestacion } from '../../llaves/schemas/llaveTipoPrestacion';
 import { auditoriaPrestacionPaciente as auditoria } from '../schemas/auditoriaPrestacionPaciente';
 import { Auth } from './../../../auth/auth.class';
-import { Logger } from '../../../utils/logService';
 
 /**
  * Auditoría de Prestaciones de Pacientes (collection prestacionPaciente)
  */
+
+/**
+* RUTAS
+* @deprecated
+* [DEPRECATED]
+*/
 
 const router = express.Router();
 
@@ -80,13 +85,14 @@ router.post('/auditoria', (req, res, next) => {
     // Debe ir antes del save, y ser una instancia del modelo
     Auth.audit(insertAuditoria, req);
     insertAuditoria.save((errOnInsert) => {
-        Logger.log(req, 'auditoria', 'insert', {
-            accion: 'Agregar configuración de auditoría de prestacionPaciente',
-            ruta: req.url,
-            method: req.method,
-            data: insertAuditoria,
-            errOnInsert: errOnInsert || false
-        });
+        // [LOG] Borrar
+        // Logger.log(req, 'auditoria', 'insert', {
+        //     accion: 'Agregar configuración de auditoría de prestacionPaciente',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data: insertAuditoria,
+        //     errOnInsert: errOnInsert || false
+        // });
         if (errOnInsert) {
             return next(errOnInsert);
         }
@@ -102,14 +108,14 @@ router.put('/prestacionPaciente/:id', (req, res, next) => {
 
     updateAuditoria.isNew = false;
     updateAuditoria.save((errOnUpdate) => {
-
-        Logger.log(req, 'auditoria', 'update', {
-            accion: 'Actualizar auditoría de prestacionPaciente',
-            ruta: req.url,
-            method: req.method,
-            data: updateAuditoria,
-            err: errOnUpdate || false
-        });
+        // [LOG] Borrar
+        // Logger.log(req, 'auditoria', 'update', {
+        //     accion: 'Actualizar auditoría de prestacionPaciente',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data: updateAuditoria,
+        //     err: errOnUpdate || false
+        // });
 
         if (errOnUpdate) {
             return next(errOnUpdate);
@@ -130,13 +136,14 @@ router.patch('/prestacionPaciente/:id', (req, res, next) => {
         // Patch
         data.set(req.body.key, req.body.value);
         data.save((errOnPatch) => {
-            Logger.log(req, 'auditoria', 'update', {
-                accion: 'Actualizar auditoría de prestacionPaciente',
-                ruta: req.url,
-                method: req.method,
-                data,
-                err: errOnPatch || false
-            });
+            // [LOG] Borrar
+            // Logger.log(req, 'auditoria', 'update', {
+            //     accion: 'Actualizar auditoría de prestacionPaciente',
+            //     ruta: req.url,
+            //     method: req.method,
+            //     data,
+            //     err: errOnPatch || false
+            // });
             if (errOnPatch) {
                 return next(errOnPatch);
             }
@@ -147,13 +154,14 @@ router.patch('/prestacionPaciente/:id', (req, res, next) => {
 
 router.delete('/prestacionPaciente/:id', (req, res, next) => {
     auditoria.findByIdAndRemove(req.params.id, (err, data) => {
-        Logger.log(req, 'auditoria', 'delete', {
-            accion: 'Eliminar Aditoría de prestacionPaciente',
-            ruta: req.url,
-            method: req.method,
-            data,
-            err: err || false
-        });
+        // [LOG] Borrar
+        // Logger.log(req, 'auditoria', 'delete', {
+        //     accion: 'Eliminar Aditoría de prestacionPaciente',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data,
+        //     err: err || false
+        // });
         if (err) {
             return next(err);
         }

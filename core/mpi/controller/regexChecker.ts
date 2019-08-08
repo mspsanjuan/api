@@ -5,8 +5,12 @@ import { userScheduler } from '../../../config.private';
 import { Auth } from '../../../auth/auth.class';
 const regtest = /[^a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ ']+/;
 import { matchSisa } from '../../../utils/servicioSisa';
-import { log } from '@andes/log';
-import { logKeys } from './../../../config';
+
+
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+const RegexCheckerLog = new Logger({ connection: Connections.logs, module: 'jobs', application: 'andes', type: 'regexChecker' });
+
 /**
  * Busca pacientes validados en MPI con errores de charset en nombre y apellido,
  *  intenta corregir los errores con SISA y si no puede los deja como temporales en la bd de temporales.
@@ -14,8 +18,8 @@ import { logKeys } from './../../../config';
  * @param {*} done
  */
 export async function regexChecker(done) {
+    const regexLog = RegexCheckerLog.startTrace();
     try {
-
         let cursor = await pacienteMpi.find({ $or: [{ nombre: { $regex: regtest } }, { apellido: { $regex: regtest } }] }).limit(100).cursor();
         let countPacienteError = 0;
 
@@ -41,15 +45,18 @@ export async function regexChecker(done) {
             const nuevoPac = JSON.parse(JSON.stringify(pacienteAndes));
             const connElastic = new ElasticSync();
             await connElastic.sync(nuevoPac);
-            log(userScheduler, logKeys.regexChecker.key, pac, logKeys.regexChecker.operacion, pac, pacienteOld);
+            regexLog.info('update', pac);
+            // log(userScheduler, logKeys.regexChecker.key, pac, logKeys.regexChecker.operacion, pac, pacienteOld);
         }).catch(err => {
-            log(userScheduler, logKeys.regexChecker.key, null, logKeys.regexChecker.operacion, null, null, err);
+            regexLog.error('update', {}, err);
+            // log(userScheduler, logKeys.regexChecker.key, null, logKeys.regexChecker.operacion, null, null, err);
             done();
         });
         done();
 
     } catch (err) {
-        log(userScheduler, logKeys.regexChecker.key, null, logKeys.regexChecker.operacion, null, null, err);
+        regexLog.error('update', {}, err);
+        // log(userScheduler, logKeys.regexChecker.key, null, logKeys.regexChecker.operacion, null, null, err);
         done();
     }
 }

@@ -1,5 +1,8 @@
 import { logJobs } from '../core/log/schemas/logJobs';
-
+/**
+ * @deprecated
+ * [DEPRECATED]
+ */
 export class LoggerJobs {
 
     public static log(job, msg, callback?): any {

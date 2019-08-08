@@ -20,7 +20,7 @@ export function getAgendasDeMongoExportadas() {
         agendasCache.find({
             $or: [{
                 estadoIntegracion: constantes.EstadoExportacionAgendaCache.exportada
-            },    {
+            }, {
                 estadoIntegracion: constantes.EstadoExportacionAgendaCache.codificada
             }]
         }).exec((err, data) => {
@@ -333,8 +333,8 @@ function markAgendaAsProcessed(agenda) {
             _id: agenda._id
         }, {
             $set: {
-                estadoIntegracion
-            }
+                    estadoIntegracion
+                }
         }).exec());
     });
 }
@@ -417,6 +417,7 @@ export async function guardarCacheASips(agendasMongo, index, pool) {
                 });
 
             } catch (ee) {
+                // [LOG] Borrar
                 logger.LoggerAgendaCache.logAgenda(agenda._id, ee);
                 transaccion.rollback();
                 next(pool);

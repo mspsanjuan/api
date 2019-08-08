@@ -5,7 +5,6 @@ import * as utils from '../../../utils/utils';
 import { defaultLimit, maxLimit } from './../../../config';
 // import * as config from '../../../config';
 import * as moment from 'moment';
-import { Logger } from '../../../utils/logService';
 
 const async = require('async');
 const router = express.Router();
@@ -57,11 +56,6 @@ router.post('/listaEspera', (req, res, next) => {
         if (err) {
             return next(err);
         }
-        Logger.log(req, 'citas', 'lista espera', (errLog) => {
-            if (errLog) {
-                return next(err);
-            }
-        });
         res.json(newItem);
     });
 
@@ -90,14 +84,14 @@ router.post('/listaEspera/IdAgenda/:_id', (req, res, next) => {
                 break;
         }
 
-        async.each(listaEsperaPaciente, (listaEsperaData, callback)  => {
+        async.each(listaEsperaPaciente, (listaEsperaData, callback) => {
             const newItem = new listaEspera(listaEsperaData);
 
             newItem.save((err1, item) => {
                 callback();
             });
 
-        }, (err2)  => {
+        }, (err2) => {
             if (err2) {
                 return next(err2);
             }
@@ -107,7 +101,7 @@ router.post('/listaEspera/IdAgenda/:_id', (req, res, next) => {
 });
 
 
-router.delete('/listaEspera/:_id', (req, res, next)  => {
+router.delete('/listaEspera/:_id', (req, res, next) => {
     listaEspera.findByIdAndRemove(req.params._id, req.body, (err, data) => {
         if (err) { return next(err); }
         res.json(data);

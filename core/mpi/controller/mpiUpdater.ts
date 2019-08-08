@@ -11,6 +11,8 @@ import { log } from '@andes/log';
  * @export
  * @param {Paciente} pacienteBuscado
  * @returns
+ * @deprecated
+ * [DEPRECATED]
  */
 
 async function existeEnMpi(pacienteBuscado: any) {

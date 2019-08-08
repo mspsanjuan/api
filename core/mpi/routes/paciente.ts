@@ -5,7 +5,6 @@ import { pacienteMpi, paciente } from '../schemas/paciente';
 import { log } from '../../log/schemas/log';
 import * as controller from '../controller/paciente';
 import { Auth } from './../../../auth/auth.class';
-import { Logger } from '../../../utils/logService';
 import { ElasticSync } from '../../../utils/elasticSync';
 import * as debug from 'debug';
 import { toArray } from '../../../utils/utils';
@@ -14,6 +13,11 @@ import { log as andesLog } from '@andes/log';
 import { logKeys } from '../../../config';
 
 import { getObraSocial } from '../../../modules/obraSocial/controller/obraSocial';
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+
+const patientLog = new Logger({ connection: Connections.logs, module: 'mpi', application: 'andes', type: 'paciente' });
+
 const logD = debug('paciente-controller');
 const router = express.Router();
 
@@ -385,7 +389,7 @@ router.put('/pacientes/mpi/:id', (req, res, next) => {
 
                 connElastic.create(newPatient._id.toString(), nuevoPac).then(() => {
                     EventCore.emitAsync('mpi:patient:update', newPatient);
-                    Logger.log(req, 'mpi', 'elasticInsertInPut', newPatient);
+                    patientLog.info('elasticInsertInPut', newPatient, req);
                     res.json();
                 }).catch(error => {
                     return next(error);
@@ -722,7 +726,8 @@ router.post('/pacientes/:id/identificadores', async (req, res, next) => {
             if (pacienteLinkeado.db === 'mpi') {
                 await controller.deletePacienteMpi(pacienteLinkeado.paciente._id);
             }
-            Logger.log(req, 'mpi', req.body.op, { pacienteBase: pacienteBase.paciente._id, pacienteLinkeado: pacienteLinkeado.paciente._id });
+            // [LOG] DEPRECADO
+            patientLog.info(req.body.op, { pacienteBase: pacienteBase.paciente._id, pacienteLinkeado: pacienteLinkeado.paciente._id }, req);
             res.json(pacienteSaved);
         } else {
             return next('Paciente no encontrado');

@@ -2,10 +2,11 @@ import * as express from 'express';
 import * as mongoose from 'mongoose';
 import { llaveTipoPrestacion } from '../schemas/llaveTipoPrestacion';
 import { Auth } from './../../../auth/auth.class';
-import { Logger } from '../../../utils/logService';
 
 /**
  * Configuración de Tipo Prestación, incluye llaves
+ * @deprecated
+ * [DEPRECATED]
  */
 
 const router = express.Router();
@@ -87,13 +88,13 @@ router.post('/tipoPrestacion', (req, res, next) => {
     // Debe ir antes del save, y ser una instancia del modelo
     Auth.audit(insertLlaveTipoPrestacion, req);
     insertLlaveTipoPrestacion.save((errOnInsert) => {
-        Logger.log(req, 'llaveTipoPrestacion', 'insert', {
-            accion: 'Agregar configuración de TipoPrestacion',
-            ruta: req.url,
-            method: req.method,
-            data: insertLlaveTipoPrestacion,
-            errOnInsert: errOnInsert || false
-        });
+        // Logger.log(req, 'llaveTipoPrestacion', 'insert', {
+        //     accion: 'Agregar configuración de TipoPrestacion',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data: insertLlaveTipoPrestacion,
+        //     errOnInsert: errOnInsert || false
+        // });
         if (errOnInsert) {
             return next(errOnInsert);
         }
@@ -110,13 +111,13 @@ router.put('/tipoPrestacion/:id', (req, res, next) => {
     updateLlaveTipoPrestacion.isNew = false;
     updateLlaveTipoPrestacion.save((errOnUpdate) => {
 
-        Logger.log(req, 'llaveTipoPrestacion', 'update', {
-            accion: 'Actualizar configuración de TipoPrestacion',
-            ruta: req.url,
-            method: req.method,
-            data: updateLlaveTipoPrestacion,
-            err: errOnUpdate || false
-        });
+        // Logger.log(req, 'llaveTipoPrestacion', 'update', {
+        //     accion: 'Actualizar configuración de TipoPrestacion',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data: updateLlaveTipoPrestacion,
+        //     err: errOnUpdate || false
+        // });
 
         if (errOnUpdate) {
             return next(errOnUpdate);
@@ -143,13 +144,13 @@ router.patch('/tipoPrestacion/:id', (req, res, next) => {
 
         data.save((errOnPatch) => {
 
-            Logger.log(req, 'llaveTipoPrestacion', 'update', {
-                accion: 'Actualizar configuración de TipoPrestacion',
-                ruta: req.url,
-                method: req.method,
-                data,
-                err: errOnPatch || false
-            });
+            // Logger.log(req, 'llaveTipoPrestacion', 'update', {
+            //     accion: 'Actualizar configuración de TipoPrestacion',
+            //     ruta: req.url,
+            //     method: req.method,
+            //     data,
+            //     err: errOnPatch || false
+            // });
 
             if (errOnPatch) {
                 return next(errOnPatch);
@@ -165,13 +166,13 @@ router.patch('/tipoPrestacion/:id', (req, res, next) => {
 router.delete('/tipoPrestacion/:id', (req, res, next) => {
     llaveTipoPrestacion.findByIdAndRemove(req.params.id, (err, data) => {
 
-        Logger.log(req, 'llaveTipoPrestacion', 'delete', {
-            accion: 'Eliminar Configuración de TipoPrestacion',
-            ruta: req.url,
-            method: req.method,
-            data,
-            err: err || false
-        });
+        // Logger.log(req, 'llaveTipoPrestacion', 'delete', {
+        //     accion: 'Eliminar Configuración de TipoPrestacion',
+        //     ruta: req.url,
+        //     method: req.method,
+        //     data,
+        //     err: err || false
+        // });
 
         if (err) {
             return next(err);

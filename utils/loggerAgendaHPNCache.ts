@@ -1,5 +1,8 @@
 import { logAgendaCache } from '../core/log/schemas/logAgendaHPNCache';
-
+/**
+ * @deprecated
+ * [DEPRECATED]
+ */
 export class LoggerAgendaCache {
 
     public static logAgenda(agendaId, msg, callback?): any {

@@ -11,7 +11,7 @@
     "@andes/fhir": "file:packages/fhir",
     "@andes/fuentes-autenticas": "file:packages/fuentes-autenticas",
     "@andes/georef": "file:packages/georef",
-    "@andes/log": "^1.1.5",
+    "@andes/log": "^2.0.0",
     "@andes/match": "^1.1.12",
     "@andes/mongoose-plugin-audit": "file:packages/mongoose-plugin-audit",
     "@andes/mpi": "file:core_v2/mpi",

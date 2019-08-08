@@ -3,7 +3,7 @@ import * as PacienteModule from './paciente.schema';
 import { MongoQuery } from '@andes/query-builder';
 
 import { findById, store, search, matching, set, suggest, find } from './paciente.controller';
-import * as log from '@andes/log';
+import * as log from './paciente.log';
 import * as PacienteTxModule from './pacienteTx';
 import { ImportMock } from 'ts-mock-imports';
 
@@ -89,12 +89,12 @@ describe('MPI - Paciente controller', () => {
 
         it('paciente creado con datos básicos', async () => {
             const createStub = mockElasticPaciente.mock('create', true);
-            const logstub = sinon.stub(log, 'log').callsFake(null);
+            const logstub = sinon.stub(log.pacienteLog, 'info').callsFake(null);
 
             mockPaciente.expects('save').chain('exec').resolves('RESULT');
 
             const patientCreated = await store(mockPaciente.object as any, req);
-            sinon.assert.calledOnce(log.log);
+            sinon.assert.calledOnce(log.pacienteLog.info);
             sinon.assert.calledOnce(startTransactionStub);
             sinon.assert.calledOnce(commitTransactionStub);
             sinon.assert.notCalled(abortTransactionStub);

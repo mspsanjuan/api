@@ -55,17 +55,20 @@ export const PacienteSchema: mongoose.Schema = new mongoose.Schema({
         required: false
     },
     // --------------------
-    relaciones: [{
-        relacion: ParentescoSchema,
-        referencia: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'paciente'
-        },
-        nombre: String,
-        apellido: String,
-        documento: String,
-        foto: String
-    }],
+    relaciones: {
+        type: [{
+            relacion: ParentescoSchema,
+            referencia: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'paciente'
+            },
+            nombre: String,
+            apellido: String,
+            documento: String,
+            foto: String
+        }],
+        required: true
+    },
     financiador: [FinanciadorSchema],
     claveBlocking: [String],
     entidadesValidadoras: [String],

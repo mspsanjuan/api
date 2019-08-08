@@ -3,7 +3,7 @@ import { Connections } from './../../../connections';
 
 const router = express.Router();
 
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
     res.json({
         API: 'OK',
         DB: Connections.main.readyState !== 1 ? 'Error' : 'OK',

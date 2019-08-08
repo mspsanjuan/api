@@ -1,13 +1,13 @@
 import * as express from 'express';
-import {
-    Auth
-} from '../../../auth/auth.class';
-import {
-    getServicioRenaper
-} from '../../../utils/servicioRenaper';
-import {
-    Logger
-} from '../../../utils/logService';
+import { Auth } from '../../../auth/auth.class';
+import { getServicioRenaper } from '../../../utils/servicioRenaper';
+
+/**
+ * RUTAS
+ * @deprecated
+ * [DEPRECATED]
+ */
+
 
 const router = express.Router();
 
@@ -20,14 +20,14 @@ router.get('/renaper', async (req: any, res, next) => {
         try {
             const resultado: any = await getServicioRenaper(paciente, req.user.usuario);
             // Logueamos la operación de búsqueda en la colección.
-            Logger.log(req, 'fa_renaper', 'validar', {
-                data: resultado
-            });
+            // Logger.log(req, 'fa_renaper', 'validar', {
+            //     data: resultado
+            // });
             res.json(resultado);
         } catch (err) {
-            Logger.log(req, 'fa_renaper', 'error', {
-                error: err
-            });
+            // Logger.log(req, 'fa_renaper', 'error', {
+            //     error: err
+            // });
             return next(err);
         }
     } else {

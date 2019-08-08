@@ -13,8 +13,11 @@ import { formacionCero, vencimientoMatriculaGrado, matriculaCero, vencimientoMat
 import { IGuiaProfesional } from '../interfaces/interfaceProfesional';
 import { sendSms } from '../../../utils/roboSender/sendSms';
 import { toArray } from '../../../utils/utils';
-import { log } from '@andes/log';
 import { EventCore } from '@andes/event-bus';
+
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+const profesionalLog = new Logger({ connection: Connections.logs, module: 'tm', application: 'andes', type: 'profesionales' });
 
 
 let router = express.Router();
@@ -491,7 +494,7 @@ router.post('/profesionales', Auth.authenticate(), (req, res, next) => {
                     next(err2);
                 }
                 EventCore.emitAsync('matriculaciones:profesionales:create', newProfesional);
-                log(req, 'profesional:post', null, 'profesional:post', newProfesional, null);
+                profesionalLog.info('create', newProfesional, req);
                 res.json(newProfesional);
             });
         } catch (err) {
@@ -585,7 +588,7 @@ router.put('/profesionales/actualizar', Auth.authenticate(), async (req, res, ne
 
 
             EventCore.emitAsync('matriculaciones:profesionales:create', resultado);
-            log(req, 'profesional:put', null, 'profesional:put', resultado, profesionalOriginal);
+            profesionalLog.info('update', resultado, req);
 
             res.json(resultado);
         } else {
@@ -678,7 +681,8 @@ router.patch('/profesionales/:id?', Auth.authenticate(), async (req, res, next) 
 
         Auth.audit(resultado, req);
         await resultado.save();
-        log(req, 'profesional:patch', null, 'profesional:patch', resultado, profesionalOriginal);
+        profesionalLog.info('update', resultado, req);
+
         res.json(resultado);
     } catch (err) {
         next(err);

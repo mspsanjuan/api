@@ -6,15 +6,13 @@ import * as express from 'express';
 import * as moment from 'moment';
 import { Auth } from '../../../auth/auth.class';
 import { PacienteTx } from './pacienteTx';
-import { log } from '@andes/log';
-import { logKeys } from '../../../config';
 import { EventCoreV2 } from '@andes/event-bus';
 import { IPaciente, IPacienteDoc } from './paciente.interface';
 import { Matching } from '@andes/match';
 import * as config from '../../../config';
 import { MongoQuery, isSelected } from '@andes/query-builder';
 import { getObraSocial } from '../../../modules/obraSocial/controller/obraSocial';
-
+import { pacienteLog } from './paciente.log';
 /**
  * Crea un objeto paciente
  */
@@ -48,13 +46,13 @@ export async function store(paciente: IPacienteDoc, req: express.Request, events
             await PacienteTx.sync(paciente);
         }
         if (isNew) {
-            log(req, logKeys.mpiInsert.key, paciente._id, logKeys.mpiInsert.operacion, paciente, null);
+            pacienteLog.info('create', paciente, req);
             await session.commitTransaction();
             if (events) {
                 EventCoreV2.emitAsync('mpi:patient:create', paciente);
             }
         } else {
-            log(req, logKeys.mpiUpdate.key, paciente._id, logKeys.mpiUpdate.operacion, paciente, pacienteOriginal);
+            pacienteLog.info('update', paciente, req);
             await session.commitTransaction();
             if (events) {
                 EventCoreV2.emitAsync('mpi:patient:update', paciente, pacienteFields);
@@ -63,9 +61,9 @@ export async function store(paciente: IPacienteDoc, req: express.Request, events
         return paciente;
     } catch (error) {
         if (isNew) {
-            log(req, logKeys.mpiInsert.key, null, logKeys.mpiInsert.operacion, paciente, 'Error insertando paciente');
+            pacienteLog.error('create', paciente, error, req);
         } else {
-            log(req, logKeys.mpiUpdate.key, paciente._id, logKeys.mpiUpdate.operacion, null, 'Error actualizando paciente');
+            pacienteLog.error('update', paciente, error, req);
         }
         await session.abortTransaction();
         if (error.name === 'ValidationError') {
@@ -131,7 +129,7 @@ export async function remove(paciente: IPacienteDoc, req: express.Request) {
         await paciente.remove();
         await PacienteTx.delete(paciente);
         await session.commitTransaction();
-        log(req, logKeys.mpiDelete.key, paciente._id, logKeys.mpiDelete.operacion, paciente, null);
+        pacienteLog.info('delete', paciente, req);
         EventCoreV2.emitAsync('mpi:patient:delete', paciente);
         return;
     } catch (err) {

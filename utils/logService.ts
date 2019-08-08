@@ -1,4 +1,8 @@
 import * as log from '../core/log/schemas/log';
+/**
+ * @deprecated
+ * [DEPRECATED]
+ */
 
 export class Logger {
 

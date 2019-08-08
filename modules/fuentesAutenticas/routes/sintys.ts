@@ -1,7 +1,12 @@
 import * as express from 'express';
 import { Auth } from '../../../auth/auth.class';
 import { matchSintys } from '../../../utils/servicioSintys';
-import { Logger } from '../../../utils/logService';
+
+/**
+ * RUTAS
+ * @deprecated
+ * [DEPRECATED]
+ */
 
 const router = express.Router();
 
@@ -14,13 +19,13 @@ router.get('/sintys', async (req, res, next) => {
         try {
             const pacienteSintys = await matchSintys(paciente);
             res.json(pacienteSintys);
-            Logger.log(req, 'fa_sintys', 'validar', {
-                resultado: pacienteSintys
-            });
+            // Logger.log(req, 'fa_sintys', 'validar', {
+            //     resultado: pacienteSintys
+            // });
         } catch (err) {
-            Logger.log(req, 'fa_sintys', 'error', {
-                error: err
-            });
+            // Logger.log(req, 'fa_sintys', 'error', {
+            //     error: err
+            // });
             return next(err);
         }
     }

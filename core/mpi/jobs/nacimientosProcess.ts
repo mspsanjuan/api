@@ -2,11 +2,9 @@ import { paciente } from '../schemas/paciente';
 import moment = require('moment');
 import { userScheduler } from '../../../config.private';
 import { buscarPacienteWithcondition, createPaciente, updatePaciente, validarPaciente } from '../controller/paciente';
-import * as https from 'https';
 import { Types } from 'mongoose';
 import debug = require('debug');
 import { registroProvincialData } from '../../../config.private';
-import { Logger } from '../../../utils/logService';
 import { handleHttpRequest } from '../../../utils/requestHandler';
 const deb = debug('nacimientosJob');
 
@@ -52,9 +50,10 @@ async function relacionar(mama, bebe) {
         documento: mama.documento,
     }];
     let bebeAndes: any = await createPaciente(bebe, userScheduler);
-    Logger.log(userScheduler, 'mpi', 'insert', {
-        paciente: bebeAndes
-    });
+    // [LOG] Borrar
+    // Logger.log(userScheduler, 'mpi', 'insert', {
+    //     paciente: bebeAndes
+    // });
 
     if (mama.relaciones) {
         let resultado = mama.relaciones.filter(elem => {
@@ -97,10 +96,11 @@ async function relacionar(mama, bebe) {
 
     // deb('UPDATE MAMA--->', updateMama);
     let mamaUpdated = await updatePaciente(mama, updateMama, userScheduler);
-    Logger.log(userScheduler, 'mpi', 'update', {
-        original: mama,
-        nuevo: mamaUpdated
-    });
+    // [LOG] Borrar
+    // Logger.log(userScheduler, 'mpi', 'update', {
+    //     original: mama,
+    //     nuevo: mamaUpdated
+    // });
 }
 
 function parsearPacientes(importedData) {

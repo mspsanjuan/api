@@ -16,7 +16,7 @@
     "@andes/fuentes-autenticas": "file:../../packages/fuentes-autenticas",
     "@andes/event-bus": "file:../../packages/event-bus",
     "@andes/api": "file:../../packages/api",
-    "@andes/log": "^1.1.5",
+    "@andes/log": "^2.0.0",
     "@andes/match": "^1.1.12",
     "@andes/georef": "file:../../packages/georef",
     "@andes/mongoose-plugin-audit": "file:../../packages/mongoose-plugin-audit",

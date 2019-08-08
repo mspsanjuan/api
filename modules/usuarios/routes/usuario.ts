@@ -5,41 +5,43 @@ import * as ldapjs from 'ldapjs';
 // Routes
 const router = express.Router();
 // Services
-import { Logger } from '../../../utils/logService';
 // Schemas
 import { authUsers } from '../../../auth/schemas/permisos';
 // imports
 import { Auth } from '../../../auth/auth.class';
 import { EventCore } from '@andes/event-bus';
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+
 // Constantes
 const isReachable = require('is-reachable');
+
+const userLog = new Logger({ connection: Connections.logs, module: 'usuarios', application: 'andes', type: 'usuarios' });
+
 
 /**
  * Alta de usuarios
  * @method POST
  */
 
-router.post('/alta', (req, res, next) => {
+router.post('/alta', async (req, res, next) => {
     if (!Auth.check(req, 'usuarios:post')) {
         return next(403);
     }
-    const data = new authUsers(req.body);
-    data.save((err) => {
-        if (err) {
-            return next(err);
-        }
-        Logger.log(req, 'usuarios', 'insert', {
-            accion: 'Crear Usuario',
-            ruta: req.url,
-            method: req.method,
-            data,
-            err: err || false
-        });
-        res.json(data);
+    const user = new authUsers(req.body);
+    try {
+        await user.save();
+        userLog.info('create', user, req);
 
-        EventCore.emitAsync('usuarios:create', data);
+        res.json(user);
 
-    });
+        EventCore.emitAsync('usuarios:create', user);
+
+    } catch (err) {
+        userLog.error('create', user, err, req);
+        return next(err);
+    }
+
 });
 
 /**
@@ -48,7 +50,7 @@ router.post('/alta', (req, res, next) => {
  * @method PUT
  */
 
-router.put('/:id', (req, res, next) => {
+router.put('/:id', async (req, res, next) => {
     if (!Auth.check(req, 'usuarios:put')) {
         return next(403);
     }
@@ -61,15 +63,10 @@ router.put('/:id', (req, res, next) => {
             resultado.organizaciones = req.body.organizaciones;
             resultado.save((err) => {
                 if (err) {
+                    userLog.error('update', resultado, err, req);
                     return next(err);
                 }
-                Logger.log(req, 'usuarios', 'update', {
-                    accion: 'Crear Usuario',
-                    ruta: req.url,
-                    method: req.method,
-                    data: resultado,
-                    err: err || false
-                });
+                userLog.info('update', resultado, req);
                 res.json(resultado);
                 EventCore.emitAsync('usuarios:update', resultado);
             });

@@ -1,5 +1,8 @@
 import { logPaciente } from '../core/log/schemas/logPaciente';
-
+/**
+ * @deprecated
+ * [DEPRECATED]
+ */
 export class LoggerPaciente {
 
     public static logTurno(req, op, paciente, turno, bloque, agenda, callback?): any {

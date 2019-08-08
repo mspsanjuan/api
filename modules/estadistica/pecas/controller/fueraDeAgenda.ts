@@ -4,10 +4,12 @@ import * as sql from 'mssql';
 import * as mongoose from 'mongoose';
 import * as moment from 'moment';
 import { Organizacion } from '../../../../core/tm/schemas/organizacion';
-import { log } from '@andes/log';
 import { sendMail } from '../../../../utils/roboSender/sendEmail';
 import { emailListString } from '../../../../config.private';
 
+import { Logger } from '@andes/log';
+import { Connections } from '../../../../connections';
+const pecasLog = new Logger({ connection: Connections.logs, module: 'jobs', application: 'andes', type: 'pecas' });
 
 let poolPrestaciones;
 const config = {
@@ -352,7 +354,7 @@ async function auxiliar(pres: any) {
         return executeQuery(queryInsert);
 
     } catch (error) {
-        await log(logRequest, 'andes:pecas:bi', null, 'SQLOperation', null, error);
+        pecasLog.error('SQLOperation', {}, error, logRequest);
         return (error);
     }
 }
@@ -437,7 +439,7 @@ async function executeQuery(query: any) {
     try {
         await new sql.Request(poolPrestaciones).query(query);
     } catch (err) {
-        await log(logRequest, 'andes:pecas:bi', null, 'SQLOperation', query, err);
+        pecasLog.error('SQLOperation', query, err, logRequest);
         let options = mailOptions;
         options.text = `'error al insertar en sql fuera Agenda: ${query}'`;
         sendMail(mailOptions);

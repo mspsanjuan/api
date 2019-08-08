@@ -3,7 +3,6 @@ import * as express from 'express';
 import * as agenda from '../schemas/agenda';
 import * as mongoose from 'mongoose';
 import { Auth } from './../../../auth/auth.class';
-import { Logger } from '../../../utils/logService';
 import * as moment from 'moment';
 import * as agendaCtrl from '../controller/agenda';
 import * as prestacionCtrl from '../../rup/controllers/prestacion';
@@ -17,7 +16,13 @@ import { toArray } from '../../../utils/utils';
 import * as AgendasEstadisticas from '../controller/estadisticas';
 import { EventCore } from '@andes/event-bus';
 
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+
 const router = express.Router();
+
+
+const agendaLog = new Logger({ connection: Connections.logs, module: 'citas', application: 'andes', type: 'agenda' });
 
 // devuelve los 10 ultimos turnos del paciente
 router.get('/agenda/paciente/:idPaciente', (req, res, next) => {
@@ -276,22 +281,14 @@ router.get('/agenda/:id?', (req, res, next) => {
     }
 });
 
-router.post('/agenda', (req, res, next) => {
+router.post('/agenda', async (req, res, next) => {
     const data = new agenda(req.body);
-    Auth.audit(data, req);
-    data.save((err) => {
-        Logger.log(req, 'citas', 'insert', {
-            accion: 'Crear Agenda',
-            ruta: req.url,
-            method: req.method,
-            data,
-            err: err || false
-        });
-        // Fin de operaciones de cache
-        if (err) {
-            return next(err);
-        }
+    try {
 
+        Auth.audit(data, req);
+        await data.save();
+
+        agendaLog.info('create', data, req);
         EventCore.emitAsync('citas:agenda:create', data);
 
         res.json(data);
@@ -301,7 +298,11 @@ router.post('/agenda', (req, res, next) => {
             return error;
         });
         // Fin de insert cache
-    });
+
+    } catch (err) {
+        agendaLog.error('create', data, err, req);
+        return next(err);
+    }
 });
 
 
@@ -374,15 +375,17 @@ router.post('/agenda/clonar', (req, res, next) => {
                             // Ver si es necesario especificar que fue una agenda clonada
                             EventCore.emitAsync('citas:agenda:create', nuevaAgenda);
 
-                            Logger.log(req, 'citas', 'insert', {
-                                accion: 'Clonar Agenda',
-                                ruta: req.url,
-                                method: req.method,
-                                data: nuevaAgenda,
-                                err: err || false
-                            });
+                            agendaLog.info('clonar', nuevaAgenda, req);
+                            // Logger.log(req, 'citas', 'insert', {
+                            //     accion: 'Clonar Agenda',
+                            //     ruta: req.url,
+                            //     method: req.method,
+                            //     data: nuevaAgenda,
+                            //     err: err || false
+                            // });
                         }).catch(error => {
-                            return (error);
+                            agendaLog.error('clonar', nueva, error, req);
+                            return error;
                         })
                     );
                 }
@@ -395,26 +398,18 @@ router.post('/agenda/clonar', (req, res, next) => {
     }
 });
 
-router.put('/agenda/:id', (req, res, next) => {
-    agenda.findByIdAndUpdate(req.params.id, req.body, { new: true }, (err, data) => {
-        Logger.log(req, 'citas', 'update', {
-            accion: 'Editar Agenda en estado Planificación',
-            ruta: req.url,
-            method: req.method,
-            data,
-            err: err || false
-        });
-        if (err) {
-            return next(err);
-        }
-
-        // Inserto la modificación como una nueva agenda, ya que luego de asociada a SIPS se borra de la cache
-        operations.cacheTurnos(data).catch(error => { return next(error); });
-        // Fin de insert cache
+router.put('/agenda/:id', async (req, res, next) => {
+    try {
+        const data = await agenda.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        agendaLog.info('update', data, req);
+        operations.cacheTurnos(data).catch(error => { return error; });
         res.json(data);
-
         EventCore.emitAsync('citas:agenda:update', data);
-    });
+    } catch (err) {
+        agendaLog.error('update', { id: req.params.id }, err, req);
+        return next(err);
+
+    }
 });
 
 router.patch('/agenda/:id*?', (req, res, next) => {
@@ -432,16 +427,19 @@ router.patch('/agenda/:id*?', (req, res, next) => {
                         agendaCtrl.codificarTurno(req, data, t[0]).then(() => {
                             Auth.audit(data[0], req);
                             data[0].save((error) => {
-                                Logger.log(req, 'citas', 'update', {
-                                    accion: req.body.op,
-                                    ruta: req.url,
-                                    method: req.method,
-                                    data,
-                                    err: error || false
-                                });
+                                // Logger.log(req, 'citas', 'update', {
+                                //     accion: req.body.op,
+                                //     ruta: req.url,
+                                //     method: req.method,
+                                //     data,
+                                //     err: error || false
+                                // });
                                 if (error) {
+                                    // [TODO] debería ser log de turnos.
+                                    agendaLog.error('update', data[0], error, req);
                                     return next(error);
                                 }
+                                agendaLog.info('update', data[0], req);
                                 EventCore.emitAsync('citas:agenda:update', data[0]);
                             });
                         }).catch(err2 => { return next(err2); });
@@ -455,18 +453,12 @@ router.patch('/agenda/:id*?', (req, res, next) => {
                             agendaCtrl.codificarTurno(req, data2, t[0]).then(() => {
                                 Auth.audit(data2[0], req);
                                 data2[0].save((error) => {
-                                    Logger.log(req, 'citas', 'update', {
-                                        accion: req.body.op,
-                                        ruta: req.url,
-                                        method: req.method,
-                                        data: data2,
-                                        err: error || false
-                                    });
-                                    // PAra probar ahora
-                                    EventCore.emitAsync('citas:agenda:update', data2[0]);
+                                    agendaLog.info('update', data2[0], req);
                                     if (error) {
                                         return next(error);
                                     }
+                                    // Para probar ahora
+                                    EventCore.emitAsync('citas:agenda:update', data2[0]);
                                 });
                             }).catch(err3 => { return next(err3); });
                         }
@@ -578,22 +570,17 @@ router.patch('/agenda/:id*?', (req, res, next) => {
             }
             Auth.audit(data, req);
             data.save((error) => {
+                if (error) {
+                    agendaLog.error('update', data, error, req);
+                    return next(error);
+                }
+
                 EventCore.emitAsync('citas:agenda:update', data);
 
                 if (event.data) {
                     EventCore.emitAsync(`citas:${event.object}:${event.accion}`, event.data);
                 }
-
-                Logger.log(req, 'citas', 'update', {
-                    accion: req.body.op,
-                    ruta: req.url,
-                    method: req.method,
-                    data,
-                    err: error || false
-                });
-                if (error) {
-                    return next(error);
-                }
+                agendaLog.info('update', data, req);
 
                 if (req.body.op === 'suspendida') {
                     (data as any).bloques.forEach(bloque => {

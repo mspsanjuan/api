@@ -1,36 +1,23 @@
-import {
-    SnomedCIE10Mapping
-} from './../../../core/term/controller/mapping';
+import { SnomedCIE10Mapping } from './../../../core/term/controller/mapping';
 import * as cie10 from './../../../core/term/schemas/cie10';
 import * as agendaModel from '../../turnos/schemas/agenda';
 import * as moment from 'moment';
-import {
-    Auth
-} from '../../../auth/auth.class';
-import {
-    userScheduler
-} from '../../../config.private';
-import {
-    Logger
-} from '../../../utils/logService';
-import { log } from '@andes/log';
+import { Auth } from '../../../auth/auth.class';
+import { userScheduler } from '../../../config.private';
 import { logKeys } from '../../../config';
 
-import {
-    model as Prestacion
-} from '../../rup/schemas/prestacion';
+import { model as Prestacion } from '../../rup/schemas/prestacion';
 import * as request from 'request';
 import * as mongoose from 'mongoose';
-import {
-    toArray
-} from '../../../utils/utils';
-import {
-    EventCore
-} from '@andes/event-bus';
-import * as turnosController from '../../../modules/turnos/controller/turnosController';
-import * as agendaController from '../../../modules/turnos/controller/agenda';
+import { toArray } from '../../../utils/utils';
+import { EventCore } from '@andes/event-bus';
 import { NotificationService } from '../../../modules/mobileApp/controller/NotificationService';
 import * as codificacionModel from '../../rup/schemas/codificacion';
+
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+const agendaLog = new Logger({ connection: Connections.logs, module: 'citas', application: 'andes', type: 'agenda' });
+
 
 // Turno
 export function darAsistencia(req, data, tid = null) {
@@ -757,13 +744,13 @@ export async function actualizarTiposDeTurno() {
 
         Auth.audit(agenda, (userScheduler as any));
         return saveAgenda(agenda).then(() => {
-            Logger.log(userScheduler, 'citas', 'actualizarTiposDeTurno', {
+            // [LOG] update de agenda -> USER debe ser el roboto
+            agendaLog.info('actualizarTiposDeTurno', {
                 idAgenda: agenda._id,
                 organizacion: agenda.organizacion,
                 horaInicio: agenda.horaInicio,
                 updatedAt: agenda.updatedAt,
                 updatedBy: agenda.updatedBy
-
             });
             return Promise.resolve();
         }).catch(() => {
@@ -829,7 +816,8 @@ export function actualizarEstadoAgendas(start, end) {
 async function actualizarAux(agenda: any) {
     Auth.audit(agenda, (userScheduler as any));
     await saveAgenda(agenda);
-    Logger.log(userScheduler, 'citas', 'actualizarEstadoAgendas', {
+    // [LOG] update de agenda -> USER debe ser el roboto
+    agendaLog.info('actualizarEstadoAgendas', {
         idAgenda: agenda._id,
         organizacion: agenda.organizacion,
         horaInicio: agenda.horaInicio,
@@ -866,13 +854,13 @@ export function actualizarTurnosDelDia() {
 
         Auth.audit(agenda, (userScheduler as any));
         return saveAgenda(agenda).then(() => {
-            Logger.log(userScheduler, 'citas', 'actualizarTurnosDelDia', {
+            // [LOG] update de agenda -> USER debe ser el roboto
+            agendaLog.info('actualizarTurnosDelDia', {
                 idAgenda: agenda._id,
                 organizacion: agenda.organizacion,
                 horaInicio: agenda.horaInicio,
                 updatedAt: agenda.updatedAt,
                 updatedBy: agenda.updatedBy
-
             });
             return Promise.resolve();
         }).catch(() => {

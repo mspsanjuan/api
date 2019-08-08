@@ -5,12 +5,15 @@ import * as agendaCtrl from '../../turnos/controller/agenda';
 import { organizacionCache } from '../../../core/tm/schemas/organizacionCache';
 import { Organizacion } from '../../../core/tm/schemas/organizacion';
 import { Auth } from './../../../auth/auth.class';
-import { Logger } from '../../../utils/logService';
 import * as recordatorioController from '../controller/RecordatorioController';
 import { LoggerPaciente } from '../../../utils/loggerPaciente';
 import { toArray } from '../../../utils/utils';
 import * as controllerPaciente from '../../../core/mpi/controller/paciente';
-// let async = require('async');
+
+import { Logger } from '@andes/log';
+import { Connections } from '../../../connections';
+
+const turnosLog = new Logger({ connection: Connections.logs, module: 'citas', application: 'andes', type: 'turnos' });
 
 const router = express.Router();
 
@@ -211,16 +214,11 @@ router.post('/turnos/cancelar', (req: any, res, next) => {
                 agendaCtrl.liberarTurno(req, agendaObj, turno);
                 Auth.audit(agendaObj, req);
                 return agendaObj.save((error) => {
-                    Logger.log(req, 'citas', 'update', {
-                        accion: 'liberarTurno',
-                        ruta: req.url,
-                        method: req.method,
-                        data: agendaObj,
-                        err: error || false
-                    });
                     if (error) {
+                        turnosLog.error('liberarTurno', agendaObj, error, req);
                         return next(error);
                     }
+                    turnosLog.info('liberarTurno', agendaObj, req);
                     return res.json({ message: 'OK' });
                 });
 
@@ -269,22 +267,13 @@ router.post('/turnos/confirmar', (req: any, res, next) => {
 
                     Auth.audit(agendaObj, req);
                     return agendaObj.save((error) => {
-                        Logger.log(req, 'citas', 'update', {
-                            accion: 'confirmar',
-                            ruta: req.url,
-                            method: req.method,
-                            data: agendaObj,
-                            err: error || false
-                        });
-
-
-                        LoggerPaciente.logTurno(req, 'turnos:confirmar', turno.paciente, turno, bloqueId, agendaId);
-
                         if (error) {
+                            turnosLog.error('confirmar', agendaObj, error, req);
                             return next(error);
-                        } else {
-                            return res.json({ message: 'OK' });
                         }
+                        turnosLog.info('confirmar', agendaObj, req);
+                        LoggerPaciente.logTurno(req, 'turnos:confirmar', turno.paciente, turno, bloqueId, agendaId);
+                        return res.json({ message: 'OK' });
                     });
                 } else {
                     return res.status(422).send({ message: 'turno_ya_corfirmado' });
@@ -332,22 +321,13 @@ router.post('/turnos/asistencia', (req: any, res, next) => {
 
                     Auth.audit(agendaObj, req);
                     return agendaObj.save((error) => {
-                        Logger.log(req, 'citas', 'update', {
-                            accion: 'asistencia',
-                            ruta: req.url,
-                            method: req.method,
-                            data: agendaObj,
-                            err: error || false
-                        });
-
-
-                        LoggerPaciente.logTurno(req, 'turnos:asistencia', turno.paciente, turno, bloqueId, agendaId);
-
                         if (error) {
+                            turnosLog.error('asistencia', agendaObj, error, req);
                             return next(error);
-                        } else {
-                            return res.json({ message: 'OK' });
                         }
+                        turnosLog.info('asistencia', agendaObj, req);
+                        LoggerPaciente.logTurno(req, 'turnos:asistencia', turno.paciente, turno, bloqueId, agendaId);
+                        return res.json({ message: 'OK' });
                     });
                 } else {
                     return res.status(422).send({ message: 'turno_ya_asistido' });

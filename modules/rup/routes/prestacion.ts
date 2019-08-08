@@ -7,7 +7,6 @@ import { model as Prestacion } from '../schemas/prestacion';
 import * as frecuentescrl from '../controllers/frecuentesProfesional';
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { buscarEnHuds, registrosProfundidad } from '../controllers/rup';
-import { Logger } from '../../../utils/logService';
 import { makeMongoQuery } from '../../../core/term/controller/grammar/parser';
 import { SnomedModel } from '../../../core/term/schemas/snomed';
 import * as camasController from './../controllers/cama';
@@ -588,13 +587,7 @@ router.patch('/prestaciones/:id', (req, res, next) => {
                     frecuentes: req.body.registros
                 };
                 frecuentescrl.actualizarFrecuentes(dto).then(() => {
-                    Logger.log(req, 'rup', 'update', {
-                        accion: 'actualizarFrecuentes',
-                        ruta: req.url,
-                        method: req.method,
-                        data: req.body.listadoFrecuentes,
-                        err: false
-                    });
+
                 }).catch((errFrec) => {
                     return next(errFrec);
                 });
