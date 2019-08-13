@@ -1,7 +1,10 @@
 import { listadoInternacion } from '../modules/rup/controllers/internacion';
 import { buscarPaciente } from '../core/mpi/controller/paciente';
-import { ObjectId } from 'bson';
+import * as _provincias from '../core/tm/schemas/provincia';
+import * as _localidades from '../core/tm/schemas/localidad';
+import * as _barrios from '../core/tm/schemas/barrio';
 import moment = require('moment');
+import { find } from 'async';
 
 const CodSexo = {
     masculino: 1,
@@ -71,7 +74,23 @@ const idOrganizacion = '57fcf037326e73143fb48c55';     // hospital añelo
 export async function exportarInternacionesAnielo() {
     try {
         let internaciones: any[] = await listadoInternacion(filtros, idOrganizacion);
+        let provincias = await this._provincias.find();
+        let localidades = await this._localidades.find();
+        let barrios = await this._barrios.find();
         let internacionResp = [];
+        let ubicacion;
+
+        for (let documento of internaciones) {
+            documento.paciente = await buscarPaciente(documento.paciente.id);
+            ubicacion = documento.paciente.direccion.ubicacion; // path ubicacion en coleccion 'paciente'
+            documento.pais = (ubicacion && ubicacion.pais) ? ubicacion.pais : '';
+            documento.codigoPais = (documento.pais) ? '200' : '';   // cod argentina
+            documento.provincia = (ubicacion && ubicacion.provincia) ? ubicacion.provincia.nombre : '';
+            documento.codigoProvincia = (ubicacion && ubicacion.provincia) ? (provincias.find(p => p.id === ubicacion.provincia.id)).codINDEC : '';
+
+            documento.localidad = (ubicacion && ubicacion.localidad) ? ubicacion.localidad.nombre : '';
+            documento.codigoLocalidad = (ubicacion && ubicacion.localidad) ? (localidades.find(p => p.id === ubicacion.localidad.id)).codINDEC : '';
+        }
 
         internaciones.forEach((documento: any) => {
             let datosIngreso = documento.ejecucion.registros[0];    // para chequear si existen registros
@@ -79,10 +98,17 @@ export async function exportarInternacionesAnielo() {
             let informeDeIngreso = documento.ejecucion.registros[0].valor.informeIngreso;   // para acceder a informes
             let informeDeEgreso = (datosEgreso) ? documento.ejecucion.registros[1].valor.InformeEgreso : null;
 
+            /* aca faltaria agregar la informacion de localidad y barrio de cada paciente (segun codigos indec)
+                y seguir agregando los campos de documento de la madre del internado y codigo, codigo de ocupacion,
+                codigo de servicio de egreso y especialidad de egreso. Para todo esto ver el cuaderno.
+            */
+
+
             if (datosIngreso) {
                 let resp: any = {
                     AnioInfor: (datosEgreso) ? moment(informeDeEgreso.fechaEgreso).format('DD/MM/YYYY') : '',
                     Estab: 'HOSPITAL AÑELO',
+                    CodEst: '01400011',
                     HistClin: informeDeIngreso.nroCarpeta,
                     Apellido: documento.paciente.apellido,
                     Nombre: documento.paciente.nombre,
