@@ -149,6 +149,12 @@ export const modules = {
         route: '/modules/descargas',
         middleware: null
     },
+    descargasTest: {
+        active: true,
+        path: './modules/descargas-v2/routes',
+        route: '/modules/descargasTest',
+        middleware: null
+    },
     obraSocial: {
         active: true,
         path: './modules/obraSocial/routes',
