@@ -2,16 +2,12 @@ import * as rupStore from '../../../modules/rup/controllers/rupStore';
 import { join } from 'path';
 import { readFile } from 'fs';
 import { promisify } from 'util';
+import { templates } from '../descargas.config';
 
 const read = promisify(readFile);
 
-export function esAdjunto(conceptId) {
-    // SCTID de "adjunto"?
-    return (conceptId === '1921000013108');
-}
-
 export async function generarArchivoAdjuntoHTML(registro: any) {
-    let template = await read(join(__dirname, '../../../templates/rup/informes/html/includes/adjunto.html'), 'utf8');
+    let template = await read(join(__dirname, templates.adjuntos), 'utf8');
 
     let filePromises = [];
     let adjuntos = '';

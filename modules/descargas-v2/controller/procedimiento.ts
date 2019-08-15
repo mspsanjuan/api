@@ -2,19 +2,9 @@ import { ucaseFirst } from '../utils';
 import { join } from 'path';
 import { readFile } from 'fs';
 import { promisify } from 'util';
+import { templates } from '../descargas.config';
 
 const read = promisify(readFile);
-const procedimientos = [
-    'procedimiento',
-    'entidad observable',
-    'régimen/tratamiento',
-    'elemento de registro',
-    'situación',
-];
-
-export function esProcedimiento(st) {
-    return procedimientos.findIndex(x => x === st) > -1;
-}
 
 export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> {
     let valor;
@@ -34,7 +24,7 @@ export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> 
     } else {
         valor = proc.valor.toString();
     }
-    let template = await read(join(__dirname, '../../../templates/rup/informes/html/includes/procedimiento.html'), 'utf8');
+    let template = await read(join(__dirname, templates.procedimientos), 'utf8');
     return template
         .replace('<!--concepto-->', proc.concepto.conceptId !== '716141001' ? ucaseFirst(proc.nombre) : (proc.concepto.term[0].toLocaleUpperCase() + proc.concepto.term.slice(1)))
         .replace('<!--valor-->', valor)
