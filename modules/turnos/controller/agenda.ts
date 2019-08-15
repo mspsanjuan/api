@@ -20,6 +20,11 @@ import * as codificacionModel from '../../rup/schemas/codificacion';
 export function darAsistencia(req, data, tid = null) {
     const turno = getTurno(req, data, tid);
     turno.asistencia = 'asistio';
+
+    if (!turno.horaAsistencia) {
+        turno.horaAsistencia = new Date();
+    }
+
     turno.updatedAt = new Date();
     turno.updatedBy = req.user.usuario || req.user;
     return turno;
@@ -28,6 +33,11 @@ export function darAsistencia(req, data, tid = null) {
 // Turno
 export function sacarAsistencia(req, data, tid = null) {
     const turno = getTurno(req, data, tid);
+
+    if (turno.horaAsistencia) {
+        turno.horaAsistencia = null;
+    }
+
     turno.asistencia = undefined;
     turno.updatedAt = new Date();
     turno.updatedBy = req.user.usuario || req.user;
@@ -36,6 +46,11 @@ export function sacarAsistencia(req, data, tid = null) {
 // Turno
 export function marcarNoAsistio(req, data, tid = null) {
     const turno = getTurno(req, data, tid);
+
+    if (turno.horaAsistencia) {
+        turno.horaAsistencia = null;
+    }
+
     turno.asistencia = 'noAsistio';
     turno.updatedAt = new Date();
     turno.updatedBy = req.user.usuario || req.user;

@@ -25,6 +25,7 @@ const pacienteSchema = new mongoose.Schema({
 
 const turnoSchema = new mongoose.Schema({
     horaInicio: Date,
+    horaAsistencia: Date,
     asistencia: {
         type: String,
         enum: ['asistio', 'noAsistio', 'sinDatos']
