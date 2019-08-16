@@ -1,5 +1,3 @@
-import { create, CreateOptions } from 'html-pdf';
-import { renderSync } from 'node-sass';
 import { join } from 'path';
 import { promisify } from 'util';
 import { readFile } from 'fs';
@@ -13,7 +11,7 @@ import { generarInforme } from './informe';
 import * as conceptoTurneable from '../../../core/tm/schemas/tipoPrestacion';
 import * as rup from '../../../modules/rup/schemas/elementoRUP';
 import { makeFsFirma } from '../../../core/tm/schemas/firmaProf';
-import { streamToBase64 } from '../utils';
+import { streamToBase64, generarCSS, crearPDF } from '../utils';
 import { phantomPDFOptions, templates, semanticTags, } from '../descargas.config';
 
 const read = promisify(readFile);
@@ -25,7 +23,7 @@ const read = promisify(readFile);
  * @param next ExpressJS next
  * @param options html-pdf/PhantonJS rendering options
  */
-export async function descargarPDF(idPrestacion, idRegistro, idOrganizacion, usuario, options = null) {
+export async function descargarInformePrestacion(idPrestacion, idRegistro, idOrganizacion, usuario, options = null) {
     options = options || phantomPDFOptions;
     let htmlPDF = await generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario);
     const htmlCssPDF = htmlPDF + generarCSS();
@@ -33,30 +31,6 @@ export async function descargarPDF(idPrestacion, idRegistro, idOrganizacion, usu
     return newPDF;
 }
 
-
-function crearPDF(htmlCssPDF: string, options): Promise<string> {
-    return new Promise((resolve, reject) => {
-        create(htmlCssPDF, options).toFile((error, file): any => {
-            if (error) {
-                reject(error);
-            }
-            resolve(file.filename);
-        });
-    });
-}
-
-function generarCSS() {
-    // Se agregan los estilos CSS
-    let scssFile = join(__dirname, templates.mainScss);
-    // Se agregan los estilos
-    let css = '<style>\n\n';
-    // SCSS => CSS
-    css += renderSync({
-        file: scssFile
-    }).css;
-    css += '</style>';
-    return css;
-}
 
 async function getConfig(idPrestacion) {
     let config: any = await conceptoTurneable.tipoPrestacion.findOne({ conceptId: idPrestacion }).exec();
@@ -193,7 +167,7 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     };
 
     html = generarBody(html, datosHtmlBody);
-
+    html = await generarLogos(html, prestacion.solicitud);
     let datosHtmlFooter = {
         profesionalSolicitud,
         usuario,
@@ -272,15 +246,18 @@ async function generarFooter(html, datosFooter) {
     if (datosFooter.config.informe && datosFooter.motivoPrincipalDeConsulta) {
         html = html.replace('<!--motivoPrincipalDeConsulta-->', datosFooter.motivoPrincipalDeConsulta);
     }
+    return html;
+}
 
+export async function generarLogos(html, params) {
     // Se carga logo del efector, si no existe se muestra el nombre del efector como texto
-    let nombreLogo = datosFooter.prestacion.solicitud.organizacion.nombre.toLocaleLowerCase().replace(/-|\./g, '').replace(/ {2,}| /g, '-');
+    let nombreLogo = params.organizacion.nombre.toLocaleLowerCase().replace(/-|\./g, '').replace(/ {2,}| /g, '-');
     try {
         let logoEfector;
         logoEfector = await read(join(__dirname, templates.efectores + nombreLogo + '.png'));
         html = html.replace('<!--logoOrganizacion-->', `<img class="logo-efector" src="data:image/png;base64,${logoEfector.toString('base64')}">`);
     } catch (fileError) {
-        html = html.replace('<!--logoOrganizacion-->', `<b class="no-logo-efector">${datosFooter.prestacion.solicitud.organizacion.nombre}</b>`);
+        html = html.replace('<!--logoOrganizacion-->', `<b class="no-logo-efector">${params.organizacion.nombre}</b>`);
     }
 
     // Logos comunes a todos los informes
@@ -288,8 +265,6 @@ async function generarFooter(html, datosFooter) {
     let logoAndes = await read(join(__dirname, templates.logoAndes));
     let logoPDP = await read(join(__dirname, templates.logoPDP));
     let logoPDP2 = await read(join(__dirname, templates.logoPDP2));
-
-    // Firmas
     html = html
         .replace('<!--logoAdicional-->', `<img class="logo-adicional" src="data:image/png;base64,${logoAdicional.toString('base64')}">`)
         .replace('<!--logoAndes-->', `<img class="logo-andes" src="data:image/png;base64,${logoAndes.toString('base64')}">`)
