@@ -5,7 +5,6 @@ import { promisify } from 'util';
 import { readFile } from 'fs';
 import { model as Prestacion } from '../../rup/schemas/prestacion';
 import moment = require('moment');
-import { compile } from 'handlebars';
 import { buscarPaciente } from '../../../core/mpi/controller/paciente';
 import { getChildren } from '../../../core/term/controller/snomedCtr';
 import { ISnomedConcept } from '../../../modules/rup/schemas/snomed-concept';
@@ -26,9 +25,9 @@ const read = promisify(readFile);
  * @param next ExpressJS next
  * @param options html-pdf/PhantonJS rendering options
  */
-export async function descargarPDF(idPrestacion, idOrganizacion, usuario, options = null) {
+export async function descargarPDF(idPrestacion, idRegistro, idOrganizacion, usuario, options = null) {
     options = options || phantomPDFOptions;
-    let htmlPDF = await generarHTML(idPrestacion, idOrganizacion, usuario);
+    let htmlPDF = await generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario);
     const htmlCssPDF = htmlPDF + generarCSS();
     let newPDF = await crearPDF(htmlCssPDF, options);
     return newPDF;
@@ -82,10 +81,11 @@ function existeSemanticTagMPC(st) {
     return semanticTags.mpc.findIndex(x => x === st) > -1;
 }
 
-async function generarHTML(idPrestacion, idOrganizacion, usuario) {
+async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     let informeRegistros: any[] = [];
     // Prestación
     let prestacion: any = await Prestacion.findById(idPrestacion).exec();
+    let registro: any = idRegistro ? prestacion.ejecucion.registros.find(y => y.id === idRegistro) : null;
     // Títulos default
     let tituloFechaEjecucion = 'Fecha Ejecución';
     let tituloFechaValidacion = 'Fecha Validación';
@@ -145,11 +145,17 @@ async function generarHTML(idPrestacion, idOrganizacion, usuario) {
             }
         }
     }
-
-    let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+    let registros = (!registro) ? (prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros) : [registro];
+    let informe = await generarInforme(registros, informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
+    // if (!registro) {
+    //     let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
+    //     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
+    // } else {
+    //     informe = await generarInforme([registro], informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
+    // }
 
     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
-    let informe = await generarInforme(registros, informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
+    // let informe = await generarInforme(registros, informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
     // Si no hay configuración de informe o si se configura "registrosDefault" en true, se genera el informe por defecto (default)
     if (!config.informe || config.informe.registrosDefault) {
         contenidoInforme = informe.filter(x => x !== undefined ? x : null);
