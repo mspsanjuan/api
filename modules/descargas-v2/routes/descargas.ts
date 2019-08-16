@@ -1,9 +1,37 @@
 import * as express from 'express';
 import { Auth } from '../../../auth/auth.class';
-import { descargarPDF } from '../controller/descargas';
-
+import { descargarInformePrestacion } from '../controller/descargas';
+import { descargarCenso, generarHtmlCensoMensual, generarHTMLCensoDiario } from '../controller/censos';
 const router = express.Router();
 
+
+
+
+router.post('/censo', async (req: any, res, next) => {
+    try {
+        let params = req.body;
+        params.usuario = Auth.getUserName(req);
+        let archivo = await descargarCenso(params, generarHTMLCensoDiario);
+        res.download((archivo as string), (err) => {
+            if (err) { next(err); }
+        });
+    } catch (e) {
+        return next(e);
+    }
+});
+
+router.post('/censoMensual', async (req: any, res, next) => {
+    try {
+        let params = req.body;
+        params.usuario = Auth.getUserName(req);
+        let archivo = await descargarCenso(params, generarHtmlCensoMensual);
+        res.download((archivo as string), (err) => {
+            if (err) { next(err); }
+        });
+    } catch (e) {
+        return next(e);
+    }
+});
 
 /**
  * Se usa POST para generar la descarga porque se envían datos
@@ -15,18 +43,14 @@ router.post('/:tipo?', Auth.authenticate(), async (req: any, res, next) => {
         const idPrestacion = req.body.idPrestacion;
         const idOrganizacion = (Auth.getOrganization(req, 'id') as any);
         const usuario = Auth.getUserName(req);
-
-        let archivo = await descargarPDF(idPrestacion, idRegistro, idOrganizacion, usuario);
+        let archivo = await descargarInformePrestacion(idPrestacion, idRegistro, idOrganizacion, usuario);
         res.download(archivo, (err) => {
-            if (err) {
-                next(err);
-            } else {
-                next();
-            }
+            if (err) { next(err); }
         });
     } catch (e) {
         return next(e);
     }
-})
+});
+
 
 export = router;

@@ -38,7 +38,9 @@ export const templates = {
     logoAdicional: '../../../templates/rup/informes/img/logo-adicional.png',
     logoAndes: '../../../templates/rup/informes/img/logo-andes-h.png',
     logoPDP: '../../../templates/rup/informes/img/logo-pdp.png',
-    logoPDP2: '../../../templates/rup/informes/img/logo-pdp-h.png'
+    logoPDP2: '../../../templates/rup/informes/img/logo-pdp-h.png',
+    censoDiario: '../../../templates/rup/informes/html/censoDiario.html',
+    censoMensual: '../../../templates/rup/informes/html/censoMensual.html'
 };
 
 export const semanticTags = {
