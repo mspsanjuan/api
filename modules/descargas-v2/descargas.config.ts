@@ -34,6 +34,7 @@ export const templates = {
     adjuntos: '../../../templates/rup/informes/html/includes/adjunto.html',
     informes: '../../../templates/rup/informes/html/informe.html',
     efectores: '../../../templates/rup/informes/img/efectores/',
+    hallazgos: '../../../templates/rup/informes/html/includes/hallazgo.html',
     logoAdicional: '../../../templates/rup/informes/img/logo-adicional.png',
     logoAndes: '../../../templates/rup/informes/img/logo-andes-h.png',
     logoPDP: '../../../templates/rup/informes/img/logo-pdp.png',

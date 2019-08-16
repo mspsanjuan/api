@@ -13,7 +13,7 @@ export async function generarArchivoAdjuntoHTML(registro: any) {
     let adjuntos = '';
 
     let templateAdjuntos = '';
-    filePromises = registro.valor.documentos.filter(doc => doc.ext !== 'pdf').map(async documento => {
+    filePromises = registro.valor.documentos.map(async documento => {
         let archivo: any = await rupStore.readFile(documento.id);
         let file = [];
         archivo.stream.on('data', (data) => {

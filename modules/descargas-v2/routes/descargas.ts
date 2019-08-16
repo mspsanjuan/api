@@ -11,11 +11,12 @@ const router = express.Router();
  */
 router.post('/:tipo?', Auth.authenticate(), async (req: any, res, next) => {
     try {
+        const idRegistro = req.body.idRegistro ? req.body.idRegistro : null;
         const idPrestacion = req.body.idPrestacion;
         const idOrganizacion = (Auth.getOrganization(req, 'id') as any);
         const usuario = Auth.getUserName(req);
 
-        let archivo = await descargarPDF(idPrestacion, idOrganizacion, usuario);
+        let archivo = await descargarPDF(idPrestacion, idRegistro, idOrganizacion, usuario);
         res.download(archivo, (err) => {
             if (err) {
                 next(err);
