@@ -27,6 +27,6 @@ export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> 
     let template = await read(join(__dirname, templates.procedimientos), 'utf8');
     return template
         .replace('<!--concepto-->', proc.concepto.conceptId !== '716141001' ? ucaseFirst(proc.nombre) : (proc.concepto.term[0].toLocaleUpperCase() + proc.concepto.term.slice(1)))
-        .replace('<!--valor-->', valor)
+        .replace('<!--valor-->', `: <small>${valor}</small>`)
         .replace('<!--motivoPrincipalDeConsulta-->', proc.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '');
 }
