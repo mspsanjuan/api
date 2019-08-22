@@ -25,7 +25,7 @@ export function ucaseFirst(titulo: string) {
 
 export function generarCSS() {
     // Se agregan los estilos CSS
-    let scssFile = join(__dirname, templates.mainScss);
+    let scssFile = join(__dirname, '../../templates/rup/informes/sass/main.scss');
     // Se agregan los estilos
     let css = '<style>\n\n';
     // SCSS => CSS

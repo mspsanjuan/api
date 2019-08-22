@@ -8,22 +8,37 @@ const read = promisify(readFile);
 
 export async function generarArchivoAdjuntoHTML(registro: any) {
     let template = await read(join(__dirname, templates.adjuntos), 'utf8');
-
-    let filePromises = [];
-    let adjuntos = '';
-
     let templateAdjuntos = '';
-    filePromises = registro.valor.documentos.map(async documento => {
-        let archivo: any = await rupStore.readFile(documento.id);
-        let file = [];
-        archivo.stream.on('data', (data) => {
-            file.push(data);
-        });
-        archivo.stream.on('end', () => {
-            adjuntos = `<img src="data:image/${documento.ext};base64,${Buffer.concat(file).toString('base64')}">`;
-            templateAdjuntos = template.replace(`<!--adjuntos-->`, adjuntos);
-            return (templateAdjuntos);
-        });
+    let adjuntos = [];
+    adjuntos = await obtenerAdjuntosHTML(registro, template);
+    adjuntos.forEach(adj => {
+        templateAdjuntos += adj;
     });
+    templateAdjuntos = template.replace(`<!--adjuntos-->`, templateAdjuntos);
+    return templateAdjuntos;
+}
+
+async function obtenerAdjuntosHTML(registro: any, template: string) {
+    let filePromises = [];
+    let adjunto = '';
+
+    filePromises = registro.valor.documentos.map(documento => {
+        if (documento.id) {
+            return new Promise(async (resolve, reject) => {
+                rupStore.readFile(documento.id).then((archivo: any) => {
+                    let file = [];
+                    archivo.stream.on('data', (data) => {
+                        file.push(data);
+                    });
+                    archivo.stream.on('end', () => {
+                        adjunto = `<img src="data:image/${documento.ext};base64,${Buffer.concat(file).toString('base64')}">`;
+                        resolve(adjunto);
+                    });
+
+                });
+            });
+        }
+    });
+
     return Promise.all(filePromises);
 }

@@ -33,8 +33,10 @@ export async function generarInforme(registros, informeRegistros, solicitudPrest
 
 
 function getTipoRegistro(registro) {
-    if (registro.valor && registro.valor.descripcion) {
+    if (registro.valor && typeof registro.valor === 'string') {
         return 'descripcion';
+    } else if (registro.concepto.conceptId === '1921000013108') { // SCTID de "adjunto"?
+        return 'adjunto';
     } else if (semanticTags.hallazgos.findIndex(x => x === registro.concepto.semanticTag) > -1) {
         return 'hallazgo';
     } else if ((semanticTags.solicitudes.findIndex(x => x === registro.concepto.semanticTag) > -1) && registro.esSolicitud) {
@@ -43,8 +45,6 @@ function getTipoRegistro(registro) {
         return 'procedimiento';
     } else if (semanticTags.insumos.findIndex(x => x === registro.concepto.semanticTag) > -1) {
         return 'insumo';
-    } else if (registro.concepto.conceptId === '1921000013108') { // SCTID de "adjunto"?
-        return 'adjunto';
     } else {
         return null;
     }
@@ -53,9 +53,11 @@ function getTipoRegistro(registro) {
 async function generarRegistro(informeRegistros, registro, nivelSup) {
     switch (getTipoRegistro(registro)) {
         case 'descripcion':
+            let nombreRegistro = ((registro.nombre).replace('<p>', '')).replace('</p>', '');
+            let valorRegistro = ((registro.valor).replace('<p>', '')).replace('</p>', '');
             informeRegistros = [...informeRegistros, ({
                 concepto: { term: registro.nombre, semanticTag: registro.concepto.semanticTag },
-                valor: `<div class="nivel-${nivelSup}"><span>${ucaseFirst(registro.nombre)}</span><p>${ucaseFirst(registro.valor.descripcion)}</p></div>`
+                valor: `<div class="nivel-${nivelSup}"><p>${nombreRegistro}: <small>${valorRegistro}</small></p></div>`
             })];
             break;
         case 'hallazgo':
