@@ -10,27 +10,67 @@ import { semanticTags } from '../descargas.config';
 let nivelPadre = 0;
 
 export async function generarInforme(registros, informeRegistros, solicitudPrestacionConceptId) {
-    for (let i = 0; i < registros.length; i++) {
-        if (registros[i]) {
+    let registrosFiltrados = configuracionRegistrosPorPrestacion(registros, solicitudPrestacionConceptId);
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        if (registrosFiltrados[i]) {
             // Es resumen de la internación o colono o ...
-            nivelPadre = (registros[0].concepto.conceptId === '3571000013102' || registros[0].concepto.conceptId === '32780001' || registros[i].registros.length > 0) ? 1 : 2;
-            if (registros[i].valor) {
-                informeRegistros = await generarRegistro(informeRegistros, registros[i], nivelPadre);
-            } else if (!registros[i].valor && registros[i].nombre && solicitudPrestacionConceptId !== '73761001' && registros[0].concepto.conceptId === '310634005') {
+            nivelPadre = (registrosFiltrados[0].concepto.conceptId === '3571000013102' || registrosFiltrados[0].concepto.conceptId === '32780001' || registrosFiltrados[i].registros.length > 0) ? 1 : 2;
+            if (registrosFiltrados[i].valor) {
+                informeRegistros = await generarRegistro(informeRegistros, registrosFiltrados[i], nivelPadre);
+            } else if (!registrosFiltrados[i].valor && registrosFiltrados[i].nombre && solicitudPrestacionConceptId !== '73761001' && registrosFiltrados[0].concepto.conceptId === '310634005') {
                 informeRegistros = [...informeRegistros, {
-                    concepto: { term: registros[i].nombre, semanticTag: registros[i].concepto.semanticTag },
-                    valor: `<div class="nivel-${nivelPadre}"><h3>${ucaseFirst(registros[i].nombre)}</h3><p>${registros[i].valor ? registros[i].valor : ''}</p></div>`
+                    concepto: { term: registrosFiltrados[i].nombre, semanticTag: registrosFiltrados[i].concepto.semanticTag },
+                    valor: `<div class="nivel-${nivelPadre}"><h3>${ucaseFirst(registrosFiltrados[i].nombre)}</h3><p>${registrosFiltrados[i].valor ? registrosFiltrados[i].valor : ''}</p></div>`
                 }];
             }
-            if (registros[i].registros && registros[i].registros.length > 0) {
+            if (registrosFiltrados[i].registros && registrosFiltrados[i].registros.length > 0) {
                 nivelPadre = 0;
-                await generarInforme(registros[i].registros, informeRegistros, solicitudPrestacionConceptId);
+                await generarInforme(registrosFiltrados[i].registros, informeRegistros, solicitudPrestacionConceptId);
             }
         }
     }
     return informeRegistros;
 }
 
+function configuracionRegistrosPorPrestacion(registros, idPrestacion) {
+    switch (idPrestacion) {
+        case '310634005':
+            registros = filtroColonoscopia(registros);
+            break;
+    }
+    return registros;
+}
+
+function filtroColonoscopia(registros: any[]) {
+    let resp = [];
+    registros.forEach(reg => {
+        switch (reg.concepto.conceptId) {
+            case '422843007':
+                resp[0] = reg;
+                break;
+            case '443425001':
+                resp[1] = reg;
+                break;
+            case '440588003':
+                resp[2] = reg;
+                break;
+            case '445665009':
+                resp[3] = reg;
+                break;
+            case '423100009':
+                resp[4] = reg;
+                break;
+            case '225423004':
+                resp[5] = reg;
+                break;
+            case '1921000013108':
+                resp[6] = reg;
+                break;
+        }
+    });
+    resp = resp.filter((elem) => (elem));
+    return resp;
+}
 
 function getTipoRegistro(registro) {
     if (registro.valor && typeof registro.valor === 'string') {
