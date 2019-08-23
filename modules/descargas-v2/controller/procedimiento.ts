@@ -24,9 +24,17 @@ export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> 
     } else {
         valor = proc.valor.toString();
     }
-    let template = await read(join(__dirname, templates.procedimientos), 'utf8');
-    return template
-        .replace('<!--concepto-->', proc.concepto.conceptId !== '716141001' ? ucaseFirst(proc.nombre) : (proc.concepto.term[0].toLocaleUpperCase() + proc.concepto.term.slice(1)))
-        .replace('<!--valor-->', `: <small>${valor}</small>`)
-        .replace('<!--motivoPrincipalDeConsulta-->', proc.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '');
+
+    const concepto = proc.concepto.conceptId !== '716141001' ? ucaseFirst(proc.nombre) : (proc.concepto.term[0].toLocaleUpperCase() + proc.concepto.term.slice(1));
+    const motivoPrincipalDeConsulta = proc.esDiagnosticoPrincipal === true ? 'PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL' : '';
+
+    const datos = {
+        concepto,
+        valor,
+        motivoPrincipalDeConsulta
+    };
+
+    const template = Handlebars.compile(templates.procedimientos);
+    return template(datos);
 }
+

@@ -13,7 +13,7 @@ import * as rup from '../../../modules/rup/schemas/elementoRUP';
 import { makeFsFirma } from '../../../core/tm/schemas/firmaProf';
 import { streamToBase64, generarCSS, crearPDF } from '../utils';
 import { phantomPDFOptions, templates, semanticTags, } from '../descargas.config';
-
+import { compile } from 'handlebars';
 const read = promisify(readFile);
 
 /**
@@ -121,22 +121,12 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     }
     let registros = (!registro) ? (prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros) : [registro];
     let informe = await generarInforme(registros, informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
-    // if (!registro) {
-    //     let registros = prestacion.ejecucion.registros[0].registros.length ? prestacion.ejecucion.registros[0].registros : prestacion.ejecucion.registros;
-    //     // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
-    // } else {
-    //     informe = await generarInforme([registro], informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
-    // }
 
-    // SE ARMA TODO EL HTML PARA GENERAR EL PDF:
-    // let informe = await generarInforme(registros, informeRegistros, prestacion.solicitud.tipoPrestacion.conceptId);
-    // Si no hay configuración de informe o si se configura "registrosDefault" en true, se genera el informe por defecto (default)
     if (!config.informe || config.informe.registrosDefault) {
         contenidoInforme = informe.filter(x => x !== undefined ? x : null);
     } else {
         contenidoInforme = informe;
     }
-    // Se leen header y footer (si se le pasa un encoding, devuelve un string)
     let html = await read(join(__dirname, templates.informes), 'utf8');
     let idOrg = idOrganizacion;
     let organizacion: any = await Organizacion.findById(idOrg).exec();
@@ -144,131 +134,63 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     let edad = paciente.fechaNacimiento ? hoy.diff(moment(paciente.fechaNacimiento), 'years') + ' años' : '';
     const profesionalSolicitud = prestacion.solicitud.profesional.apellido + ', ' + prestacion.solicitud.profesional.nombre + '<br>' + prestacion.solicitud.organizacion.nombre.substring(0, prestacion.solicitud.organizacion.nombre.indexOf('-'));
 
-    let datosHtmlHeader = {
-        nombreCompleto: paciente.apellido + ', ' + paciente.nombre,
-        datosRapidosPaciente: `${paciente.sexo} | ${edad} | ${paciente.documento}`,
-        fechaNacimiento: paciente.fechaNacimiento ? moment(paciente.fechaNacimiento).format('DD/MM/YYYY') : 's/d',
-        carpeta: paciente.carpetaEfectores.find(x => x.organizacion.id === idOrg),
-        orgacionacionDireccionSolicitud: organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre,
-        profesionalSolicitud,
-        prestacion
-    };
-    html = generarHeader(html, datosHtmlHeader);
-    let datosHtmlBody = {
-        prestacion,
-        tipoPrestacion,
-        tituloFechaEjecucion,
-        tituloFechaValidacion,
-        fechaEjecucion: new Date(prestacion.estados.find(x => x.tipo === 'ejecucion').createdAt),
-        fechaValidacion: new Date(prestacion.estados.find(x => x.tipo === 'validada').createdAt),
-        tituloInforme,
-        contenidoInforme,
-        informe
-    };
-
-    html = generarBody(html, datosHtmlBody);
-    html = await generarLogos(html, prestacion.solicitud);
-    let datosHtmlFooter = {
-        profesionalSolicitud,
-        usuario,
-        profesionalValidacion: prestacion.updatedBy ? prestacion.updatedBy.nombreCompleto : prestacion.createdBy.nombreCompleto,
-        fechaValidacion: new Date(prestacion.estados.find(x => x.tipo === 'validada').createdAt),
-        prestacion,
-        organizacion,
-        firmaProfesional: await getFirma(prestacion.solicitud.profesional),
-        config,
-        motivoPrincipalDeConsulta
-    };
-
-    html = await generarFooter(html, datosHtmlFooter);
-
-    return (html);
-}
-
-function generarHeader(html: string, datosHeader) {
-    html = html
-        .replace('<!--paciente-->', datosHeader.nombreCompleto)
-        .replace('<!--datosRapidosPaciente-->', datosHeader.datosRapidosPaciente)
-        .replace('<!--fechaNacimiento-->', datosHeader.fechaNacimiento)
-        .replace('<!--nroCarpeta-->', (datosHeader.carpeta && datosHeader.carpeta.nroCarpeta ? datosHeader.carpeta.nroCarpeta : 'sin número de carpeta'))
-        .replace(/(<!--organizacionNombreSolicitud-->)/g, datosHeader.prestacion.solicitud.organizacion.nombre.replace(' - ', '<br>'))
-        .replace('<!--orgacionacionDireccionSolicitud-->', datosHeader.orgacionacionDireccionSolicitud)
-        .replace('<!--fechaSolicitud-->', moment(datosHeader.prestacion.solicitud.fecha).format('DD/MM/YYYY'))
-        .replace('<!--profesionalSolicitud-->', datosHeader.profesionalSolicitud);
-    return html;
-}
-
-function generarBody(html: string, datosBody) {
-    // BODY
-    if (datosBody.prestacion.solicitud.tipoPrestacion.conceptId === '2341000013106') { // es epicrisis?
-        const valor = datosBody.prestacion.ejecucion.registros[0].valor;
-        const fechaIngreso = valor && valor.fechaDesde ? moment(valor.fechaDesde).format('DD/MM/YYYY') : null;
-        const fechaEgreso = valor && valor.fechaHasta ? moment(valor.fechaHasta).format('DD/MM/YYYY') : null;
-        const unidadOrganizativa = valor && valor.unidadOrganizativa ? valor.unidadOrganizativa.term : null;
-        if (fechaIngreso) {
-            html = html.replace('<!--fechaIngreso-->', '<b> Ingreso: </b>' + fechaIngreso + '&nbsp;&nbsp;&nbsp;');
-        }
-        if (fechaEgreso) {
-            html = html.replace('<!--fechaEgreso-->', '<b> Egreso: </b>' + fechaEgreso + '&nbsp;&nbsp;&nbsp;');
-        }
-        if (unidadOrganizativa) {
-            html = html.replace('<!--unidadOrganizativa-->', '<b> Servicio: </b>' + unidadOrganizativa + '&nbsp;&nbsp;&nbsp;');
-        }
-
-    }
-    html = html.replace('<!--tipoPrestacion-->', datosBody.tipoPrestacion)
-        .replace('<!--fechaSolicitud-->', moment(datosBody.prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs')
-        .replace('<!--tituloFechaEjecucion-->', datosBody.tituloFechaEjecucion)
-        .replace('<!--tituloFechaValidacion-->', datosBody.tituloFechaValidacion)
-        .replace('<!--fechaEjecucion-->', moment(datosBody.fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs')
-        .replace('<!--fechaValidacion-->', moment(datosBody.fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
-        .replace('<!--tituloInforme-->', datosBody.tituloInforme ? datosBody.uloInforme : '')
-        .replace('<!--registros-->', (datosBody.contenidoInforme && datosBody.contenidoInforme.length) ? datosBody.contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join('') : datosBody.informe);
-    return html;
-}
-
-async function generarFooter(html, datosFooter) {
-    // FOOTER
-    html = html
-        .replace('<!--profesionalFirmante1-->', datosFooter.profesionalSolicitud)
-        .replace('<!--usuario-->', datosFooter.usuario)
-        .replace(/(<!--fechaActual-->)/g, moment().format('DD/MM/YYYY HH:mm') + ' hs')
-        .replace('<!--profesionalValidacion-->', datosFooter.profesionalValidacion)
-        .replace('<!--fechaValidacion-->', moment(datosFooter.fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs')
-        .replace('<!--organizacionNombreSolicitud-->', datosFooter.prestacion.solicitud.organizacion.nombre)
-        .replace('<!--orgacionacionDireccionSolicitud-->', datosFooter.organizacion.direccion.valor + ', ' + datosFooter.organizacion.direccion.ubicacion.localidad.nombre)
-        .replace('<!--fechaSolicitud-->', moment(datosFooter.prestacion.solicitud.fecha).format('DD/MM/YYYY'));
-
-    if (datosFooter.firmaProfesional) {
-        html = html.replace('<!--firma1-->', `<img src="data:image/png;base64,${datosFooter.firmaProfesional}">`);
-    }
-
-    if (datosFooter.config.informe && datosFooter.motivoPrincipalDeConsulta) {
-        html = html.replace('<!--motivoPrincipalDeConsulta-->', datosFooter.motivoPrincipalDeConsulta);
-    }
-    return html;
-}
-
-export async function generarLogos(html, params) {
-    // Se carga logo del efector, si no existe se muestra el nombre del efector como texto
-    let nombreLogo = params.organizacion.nombre.toLocaleLowerCase().replace(/-|\./g, '').replace(/ {2,}| /g, '-');
-    try {
-        let logoEfector;
-        logoEfector = await read(join(__dirname, templates.efectores + nombreLogo + '.png'));
-        html = html.replace('<!--logoOrganizacion-->', `<img class="logo-efector" src="data:image/png;base64,${logoEfector.toString('base64')}">`);
-    } catch (fileError) {
-        html = html.replace('<!--logoOrganizacion-->', `<b class="no-logo-efector">${params.organizacion.nombre}</b>`);
-    }
-
-    // Logos comunes a todos los informes
+    // REGISTROS
+    let registrosHTML = (contenidoInforme && contenidoInforme.length)
+        ? (contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join(''))
+        : informeRegistros;
+    let carpeta = paciente.carpetaEfectores.find(x => x.organizacion.id === idOrg);
+    carpeta = (carpeta && carpeta.nroCarpeta ? carpeta.nroCarpeta : 'sin número de carpeta');
+    let nombreLogo = organizacion.nombre.toLocaleLowerCase().replace(/-|\./g, '').replace(/ {2,}| /g, '-');
+    let logoEfector = await read(join(__dirname, templates.efectores + nombreLogo + '.png'));
     let logoAdicional = await read(join(__dirname, templates.logoAdicional));
     let logoAndes = await read(join(__dirname, templates.logoAndes));
     let logoPDP = await read(join(__dirname, templates.logoPDP));
     let logoPDP2 = await read(join(__dirname, templates.logoPDP2));
-    html = html
-        .replace('<!--logoAdicional-->', `<img class="logo-adicional" src="data:image/png;base64,${logoAdicional.toString('base64')}">`)
-        .replace('<!--logoAndes-->', `<img class="logo-andes" src="data:image/png;base64,${logoAndes.toString('base64')}">`)
-        .replace('<!--logoPDP-->', `<img class="logo-pdp" src="data:image/png;base64,${logoPDP.toString('base64')}">`)
-        .replace('<!--logoPDP2-->', `<img class="logo-pdp-h" src="data:image/png;base64,${logoPDP2.toString('base64')}">`);
-    return html;
+    let fechaEjecucion: any = '';
+    let fechaValidacion: any = '';
+    // Es una Epicrisis?
+    if (prestacion.solicitud.tipoPrestacion.conceptId === '2341000013106') {
+        fechaEjecucion = '<b>Fecha de Ingreso:</b> <br>' + moment(prestacion.ejecucion.registros[0].valor.fechaDesde).format('DD/MM/YYYY');
+        fechaValidacion = '<b>Fecha de Egreso:</b> <br>' + moment(prestacion.ejecucion.registros[0].valor.fechaHasta).format('DD/MM/YYYY');
+    } else {
+
+        // HEADER
+        fechaEjecucion = new Date(prestacion.estados.find(x => x.tipo === 'ejecucion').createdAt);
+        fechaEjecucion = moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs';
+        fechaValidacion = new Date(prestacion.estados.find(x => x.tipo === 'validada').createdAt);
+        fechaValidacion = moment(fechaValidacion).format('DD/MM/YYYY HH:mm') + ' hs';
+    }
+    let datos = {
+        nombreCompleto: paciente.apellido + ', ' + paciente.nombre,
+        fechaActual: moment().format('DD/MM/YYYY HH:mm') + ' hs',
+        datosRapidosPaciente: `${paciente.sexo} | ${edad} | ${paciente.documento}`,
+        fechaNacimiento: paciente.fechaNacimiento ? moment(paciente.fechaNacimiento).format('DD/MM/YYYY') : 's/d',
+        carpeta,
+        organizacionNombreSolicitud: prestacion.solicitud.organizacion.nombre.replace(' - ', '<br>'),
+        orgacionacionDireccionSolicitud: organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre,
+        profesionalSolicitud,
+        fechaSolicitud: moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs',
+        tipoPrestacion,
+        tituloFechaEjecucion,
+        tituloInforme,
+        registrosHTML,
+        motivoPrincipalDeConsulta,
+        usuario,
+        profesionalValidacion: prestacion.updatedBy ? prestacion.updatedBy.nombreCompleto : prestacion.createdBy.nombreCompleto,
+        logoEfector,
+        logoAdicional,
+        logoAndes,
+        logoPDP,
+        logoPDP2,
+        fechaEjecucion,
+        fechaValidacion,
+    };
+
+    // Limpio el informe
+    informeRegistros = [];
+
+    const template = compile(html);
+    html = template(datos);
+
+    return (html);
 }

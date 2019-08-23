@@ -22,6 +22,13 @@ export const phantomPDFOptions: CreateOptions = {
         contents: {
 
         }
+        // tslint:disable-next-line: only-arrow-functions
+        // contents: phantomjs.callback(function (pageNum, numPages) {
+        //     if (pageNum === numPages) {
+        //         return '';
+        //     }
+        //     return '<h1>Footer <span style=\'float:right\'>' + pageNum + ' / ' + numPages + '</span></h1>';
+        // })
     }
 };
 
@@ -30,15 +37,15 @@ export const templates = {
     mainScss: '../../../templates/rup/informes/sass/main.scss',
     insumos: '../../../templates/rup/informes/html/includes/insumo.html',
     procedimientos: '../../../templates/rup/informes/html/includes/procedimiento.html',
-    solicitudes: '../../../templates/rup/informes/html/includes/hallazgo.html',
+    solicitudes: '../../../templates/rup/informes/html/includes/solicitud.html',
     adjuntos: '../../../templates/rup/informes/html/includes/adjunto.html',
     informes: '../../../templates/rup/informes/html/informe.html',
-    efectores: '../../../templates/rup/informes/img/efectores/',
+    efectores: '../../../templates/images/efectores/',
     hallazgos: '../../../templates/rup/informes/html/includes/hallazgo.html',
-    logoAdicional: '../../../templates/rup/informes/img/logo-adicional.png',
-    logoAndes: '../../../templates/rup/informes/img/logo-andes-h.png',
-    logoPDP: '../../../templates/rup/informes/img/logo-pdp.png',
-    logoPDP2: '../../../templates/rup/informes/img/logo-pdp-h.png',
+    logoAdicional: '../../../templates/images/logo-adicional.png',
+    logoAndes: '../../../templates/images/logo-andes-h.png',
+    logoPDP: '../../../templates/images/logo-pdp.png',
+    logoPDP2: '../../../templates/images/logo-pdp-h.png',
     censoDiario: '../../../templates/rup/informes/html/censoDiario.html',
     censoMensual: '../../../templates/rup/informes/html/censoMensual.html'
 };
