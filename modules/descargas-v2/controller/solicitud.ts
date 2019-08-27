@@ -1,6 +1,10 @@
 import { ucaseFirst } from '../utils';
 import { templates } from '../descargas.config';
 import { compile } from 'handlebars';
+import { promisify } from 'util';
+import { readFile } from 'fs';
+import { join } from 'path';
+const read = promisify(readFile);
 
 export async function generarRegistroSolicitudHTML(plan: any): Promise<any> {
     const datos = {
@@ -11,6 +15,6 @@ export async function generarRegistroSolicitudHTML(plan: any): Promise<any> {
         profesionalesDestino: plan.valor.solicitudPrestacion.profesionalesDestino ? plan.valor.solicitudPrestacion.profesionalesDestino.map(y => y.nombreCompleto).join(' ') : ''
     };
 
-    const template = compile(templates.solicitudes);
+    const template = compile(await read(join(__dirname, templates.solicitudes), 'utf8'));
     return template(datos);
 }

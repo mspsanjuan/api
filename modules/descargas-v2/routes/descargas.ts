@@ -1,8 +1,9 @@
 import * as express from 'express';
 import { Auth } from '../../../auth/auth.class';
-import { descargarInformePrestacion } from '../controller/descargas';
+import { descargarInformePrestacion, descargarInformeColono } from '../controller/descargas';
 import { descargarCenso, generarHtmlCensoMensual, generarHTMLCensoDiario } from '../controller/censos';
 const router = express.Router();
+import { model as Prestacion } from '../../rup/schemas/prestacion';
 
 
 
@@ -43,7 +44,21 @@ router.post('/:tipo?', Auth.authenticate(), async (req: any, res, next) => {
         const idPrestacion = req.body.idPrestacion;
         const idOrganizacion = (Auth.getOrganization(req, 'id') as any);
         const usuario = Auth.getUserName(req);
-        let archivo = await descargarInformePrestacion(idPrestacion, idRegistro, idOrganizacion, usuario);
+        let archivo;
+        let prestacion: any = await Prestacion.findById(idPrestacion).exec();
+
+        /* Sección de prueba, sacar y poner dentro de otra función*/
+        switch (prestacion.solicitud.tipoPrestacion.conceptId) {
+            case '310634005':
+            case '73761001':
+                archivo = await descargarInformeColono(idPrestacion, idOrganizacion, usuario);
+                break;
+            default:
+                archivo = await descargarInformePrestacion(idPrestacion, idRegistro, idOrganizacion, usuario);
+        }
+        /* Fin seccion prueba*/
+
+
         res.download(archivo, (err) => {
             if (err) { next(err); }
         });

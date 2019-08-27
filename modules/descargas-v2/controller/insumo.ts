@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import { join } from 'path';
 import { readFile } from 'fs';
 import { templates } from '../descargas.config';
-
+import { compile } from 'handlebars';
 const read = promisify(readFile);
 
 export async function generarRegistroInsumoHTML(producto: any): Promise<any> {
@@ -29,6 +29,6 @@ export async function generarRegistroInsumoHTML(producto: any): Promise<any> {
         motivoPrincipalDeConsulta
     };
 
-    const template = Handlebars.compile(templates.insumos);
+    const template = compile(await read(join(__dirname, templates.insumos), 'utf8'));
     return template(datos);
 }

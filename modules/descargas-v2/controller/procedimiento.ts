@@ -1,9 +1,9 @@
 import { ucaseFirst } from '../utils';
-import { join } from 'path';
-import { readFile } from 'fs';
-import { promisify } from 'util';
 import { templates } from '../descargas.config';
-
+import { compile } from 'handlebars';
+import { promisify } from 'util';
+import { readFile } from 'fs';
+import { join } from 'path';
 const read = promisify(readFile);
 
 export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> {
@@ -34,7 +34,7 @@ export async function generarRegistroProcedimientoHTML(proc: any): Promise<any> 
         motivoPrincipalDeConsulta
     };
 
-    const template = Handlebars.compile(templates.procedimientos);
+    const template = compile(await read(join(__dirname, templates.procedimientos), 'utf8'));
     return template(datos);
 }
 

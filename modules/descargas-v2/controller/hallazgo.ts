@@ -1,6 +1,10 @@
 import { ucaseFirst } from '../utils';
 import { templates } from '../descargas.config';
-
+import { compile } from 'handlebars';
+import { promisify } from 'util';
+import { readFile } from 'fs';
+import { join } from 'path';
+const read = promisify(readFile);
 
 export async function generarRegistroHallazgoHTML(hallazgo: any): Promise<any> {
     const concepto = hallazgo.nombre ? hallazgo.nombre : ucaseFirst(hallazgo.concepto.term);
@@ -13,6 +17,6 @@ export async function generarRegistroHallazgoHTML(hallazgo: any): Promise<any> {
         motivoPrincipalDeConsulta
     };
 
-    const template = Handlebars.compile(templates.hallazgos);
+    const template = compile(await read(join(__dirname, templates.hallazgos), 'utf8'));
     return template(datos);
 }

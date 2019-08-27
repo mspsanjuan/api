@@ -14,6 +14,7 @@ import { makeFsFirma } from '../../../core/tm/schemas/firmaProf';
 import { streamToBase64, generarCSS, crearPDF } from '../utils';
 import { phantomPDFOptions, templates, semanticTags, } from '../descargas.config';
 import { compile } from 'handlebars';
+import { generarInformeColono } from './informeColono';
 const read = promisify(readFile);
 
 /**
@@ -30,7 +31,13 @@ export async function descargarInformePrestacion(idPrestacion, idRegistro, idOrg
     let newPDF = await crearPDF(htmlCssPDF, options);
     return newPDF;
 }
-
+export async function descargarInformeColono(idPrestacion, idOrganizacion, usuario, options = null) {
+    options = options || phantomPDFOptions;
+    let htmlPDF = await generarInformeColono(idPrestacion, idOrganizacion, usuario);
+    const htmlCssPDF = htmlPDF + generarCSS();
+    let newPDF = await crearPDF(htmlCssPDF, options);
+    return newPDF;
+}
 
 async function getConfig(idPrestacion) {
     let config: any = await conceptoTurneable.tipoPrestacion.findOne({ conceptId: idPrestacion }).exec();
@@ -73,7 +80,6 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     }
     let tipoPrestacion;
     let tituloInforme;
-
     if (config.informe) {
         // Override título "Fecha Ejecución"?
         tituloFechaEjecucion = config.informe.fechaEjecucionOverride ? config.informe.fechaEjecucionOverride : tituloFechaEjecucion;
@@ -85,7 +91,6 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     let motivoPrincipalDeConsulta: ISnomedConcept | any;
     let tituloRegistro;
     let contenidoInforme;
-
     // Override título del primer registro?
     if (config.informe && config.informe.tipoPrestacionTituloOverride) {
         tituloRegistro = hijos.find(x => prestacion.ejecucion.registros.find(y => y.concepto.conceptId === x.conceptId));
@@ -99,12 +104,10 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
             tipoPrestacion = prestacion.solicitud.tipoPrestacion.term;
             tituloInforme = '';
         }
-
     } else {
         // Si tiene un hijo directo, usamos su nombre como título de la consulta
         tipoPrestacion = prestacion.solicitud.tipoPrestacion.term[0].toUpperCase() + prestacion.solicitud.tipoPrestacion.term.slice(1);
     }
-
     // Existe configuración de PROCEDIMIENTO / DIAGNÓSTICO PRINCIPAL?
     if (config.informe && config.informe.motivoPrincipalDeConsultaOverride) {
         if (prestacion.ejecucion.registros.length > 1) {
@@ -133,7 +136,6 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
     let hoy = moment();
     let edad = paciente.fechaNacimiento ? hoy.diff(moment(paciente.fechaNacimiento), 'years') + ' años' : '';
     const profesionalSolicitud = prestacion.solicitud.profesional.apellido + ', ' + prestacion.solicitud.profesional.nombre + '<br>' + prestacion.solicitud.organizacion.nombre.substring(0, prestacion.solicitud.organizacion.nombre.indexOf('-'));
-
     // REGISTROS
     let registrosHTML = (contenidoInforme && contenidoInforme.length)
         ? (contenidoInforme.map(x => typeof x.valor === 'string' ? x.valor : JSON.stringify(x.valor)).join(''))
@@ -153,7 +155,6 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
         fechaEjecucion = '<b>Fecha de Ingreso:</b> <br>' + moment(prestacion.ejecucion.registros[0].valor.fechaDesde).format('DD/MM/YYYY');
         fechaValidacion = '<b>Fecha de Egreso:</b> <br>' + moment(prestacion.ejecucion.registros[0].valor.fechaHasta).format('DD/MM/YYYY');
     } else {
-
         // HEADER
         fechaEjecucion = new Date(prestacion.estados.find(x => x.tipo === 'ejecucion').createdAt);
         fechaEjecucion = moment(fechaEjecucion).format('DD/MM/YYYY HH:mm') + ' hs';
@@ -166,7 +167,7 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
         datosRapidosPaciente: `${paciente.sexo} | ${edad} | ${paciente.documento}`,
         fechaNacimiento: paciente.fechaNacimiento ? moment(paciente.fechaNacimiento).format('DD/MM/YYYY') : 's/d',
         carpeta,
-        organizacionNombreSolicitud: prestacion.solicitud.organizacion.nombre.replace(' - ', '<br>'),
+        organizacionNombreSolicitud: prestacion.solicitud.organizacion.nombre,
         orgacionacionDireccionSolicitud: organizacion.direccion.valor + ', ' + organizacion.direccion.ubicacion.localidad.nombre,
         profesionalSolicitud,
         fechaSolicitud: moment(prestacion.solicitud.fecha).format('DD/MM/YYYY HH:mm') + ' hs',
@@ -185,12 +186,9 @@ async function generarHTML(idPrestacion, idRegistro, idOrganizacion, usuario) {
         fechaEjecucion,
         fechaValidacion,
     };
-
     // Limpio el informe
     informeRegistros = [];
-
     const template = compile(html);
     html = template(datos);
-
     return (html);
 }
